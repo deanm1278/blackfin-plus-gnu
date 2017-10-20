@@ -1,0 +1,238 @@
+AT_SETUP(create)
+
+AT_LDR_CHECK(LDR_BINARY -q -c moo cow, [1], [], [dnl
+ldr: please select a target with -T <target>
+])
+
+AT_LDR_CHECK(LDR_BINARY -q -T BF537 -c out.ldr /bin/sh, [1], [], [dnl
+ldr: '/bin/sh' is not a Blackfin ELF!
+Failed to create LDR: Bad file descriptor
+])
+
+AT_LDR_CHECK([
+LDR_BINARY -T BF548 -c post.ldr ELFS_DIR/POST.dxe
+echo "### --- ###"
+LDR_BINARY --show post.ldr
+], [0], [dnl
+Creating LDR post.ldr ...
+ Adding DXE 'elfs/POST.dxe' ... [[jump block to 0xFFA00000] [ELF block: 29612 @ 0xFFA00000] [ELF block: 7280 @ 0xFF800000]] OK!
+Done!
+### --- ###
+Showing LDR post.ldr ...
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+         Addr: 0xFFA00000 BCode: 0xAD7F5001 Bytes: 0x00000000 Args: 0x0000904C ( 8bit-dma-from-8bit ignore first )
+    Block  2 at 0x00000010
+         Addr: 0xFFA00000 BCode: 0xAD0E0001 Bytes: 0x000073AC Args: 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  3 at 0x000073CC
+         Addr: 0xFF800000 BCode: 0xAD9D0001 Bytes: 0x00001C70 Args: 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  4 at 0x0000904C
+         Addr: 0xFFA00000 BCode: 0xAD738001 Bytes: 0x00000000 Args: 0x00000000 ( 8bit-dma-from-8bit final )
+])
+
+AT_LDR_CHECK([
+LDR_BINARY -T BF561 -c bss.ldr ELFS_DIR/bss.elf
+echo "### --- ###"
+LDR_BINARY --show bss.ldr
+], [0], [dnl
+Creating LDR bss.ldr ...
+ Adding DXE 'elfs/bss.elf' ... [[jump block to 0x00000014] [ELF block: 968 @ 0x00000000] [ELF block: 1144 @ 0x000013C8]] OK!
+Done!
+### --- ###
+Showing LDR bss.ldr ...
+  LDR header: A00000DE ( 8-bit-flash wait:15 hold:3 spi:500K )
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+         Addr: 0xFFA00000 Bytes: 0x0000000C Flags: 0x0002 ( resvect )
+    Block  2 at 0x00000016
+         Addr: 0x00000000 Bytes: 0x000003C8 Flags: 0x0002 ( resvect )
+    Block  3 at 0x000003E8
+         Addr: 0x000013C8 Bytes: 0x00000034 Flags: 0x0002 ( resvect )
+    Block  4 at 0x00000426
+         Addr: 0x000013FC Bytes: 0x00000444 Flags: 0x8003 ( zerofill resvect final )
+])
+
+AT_LDR_CHECK([
+LDR_BINARY -T BF532 -c bad.ldr ELFS_DIR/bad.elf
+], [1], [dnl
+Creating LDR bad.ldr ...
+ Adding DXE 'elfs/bad.elf' ...], [dnl
+ldr: 'elfs/bad.elf' is not a static ELF!
+Failed to create LDR: Bad file descriptor
+])
+
+AT_LDR_CHECK([
+LDR_BINARY -T BF536 -c section.ldr ELFS_DIR/section.elf
+], [0], [dnl
+Creating LDR section.ldr ...
+ Adding DXE 'elfs/section.elf' ... [[init block 2] [jump block to 0x00000000] [ELF block: 2 @ 0x00000000]] OK!
+Done!
+])
+
+AT_LDR_CHECK([
+LDR_BINARY -T bf544-0.0 -c hole-4x-split.ldr ELFS_DIR/POST.dxe --punchit 0x40:0x70
+LDR_BINARY -T bf544-0.0 -c hole-4x-expan.ldr ELFS_DIR/POST.dxe --punchit 0x30:0x70
+LDR_BINARY -T bf534-0.3 -c hole-3x-split.ldr ELFS_DIR/POST.dxe --punchit 0x40:0x70
+LDR_BINARY -T bf534-0.3 -c hole-3x-expan.ldr ELFS_DIR/POST.dxe --punchit 0x10:0x70
+echo "### --- ###"
+LDR_BINARY --quiet -s hole-4x-split.ldr
+LDR_BINARY --quiet -s hole-4x-expan.ldr
+LDR_BINARY --quiet -s hole-3x-split.ldr
+dnl The --target here is needed because the autodetect only works
+dnl if the first block is a load into L1 rather than an ignore
+LDR_BINARY --target BF533 --quiet -s hole-3x-expan.ldr
+], [0], [dnl
+Creating LDR hole-4x-split.ldr ...
+ Adding DXE 'elfs/POST.dxe' ... [[jump block to 0xFFA00000] [ELF block: 29612 @ 0xFFA00000] [ELF block: 7280 @ 0xFF800000]] OK!
+Done!
+Creating LDR hole-4x-expan.ldr ...
+ Adding DXE 'elfs/POST.dxe' ... [[jump block to 0xFFA00000] [ELF block: 29612 @ 0xFFA00000] [ELF block: 7280 @ 0xFF800000]] OK!
+Done!
+Creating LDR hole-3x-split.ldr ...
+ Adding DXE 'elfs/POST.dxe' ... [[jump block to 0xFFA00000] [ELF block: 29612 @ 0xFFA00000] [ELF block: 7280 @ 0xFF800000]] OK!
+Done!
+Creating LDR hole-3x-expan.ldr ...
+ Adding DXE 'elfs/POST.dxe' ... [[jump block to 0xFFA00000] [ELF block: 29612 @ 0xFFA00000] [ELF block: 7280 @ 0xFF800000]] OK!
+Done!
+### --- ###
+dnl
+dnl this one should split the first load block into two pieces
+dnl
+  DXE 1 at 0x00000000:
+              Offset      BlockCode  Address    Bytes      Argument
+    Block  1 0x00000000: 0xADEF5001 0xFFA00000 0x00000000 0x000090DC ( 8bit-dma-from-8bit ignore first )
+    Block  2 0x00000010: 0xADC10001 0xFFA00000 0x00000010 0xDEADBEEF ( 8bit-dma-from-8bit )
+dnl The important part is that the ignore block have an offset of
+dnl (start-block_header_size), or in this case, (0x40 - 16 == 0x30)
+    Block  3 0x00000030: 0xAD261001 0x00000000 0x00000070 0xBAADF00D ( 8bit-dma-from-8bit ignore )
+dnl Then we need to make sure that the next block has an offset of
+dnl (start+offset), or in this case, (0x40 + 0x70 == 0xB0)
+    Block  4 0x000000B0: 0xAD2E0001 0xFFA00010 0x0000739C 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  5 0x0000745C: 0xAD9D0001 0xFF800000 0x00001C70 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  6 0x000090DC: 0xAD738001 0xFFA00000 0x00000000 0x00000000 ( 8bit-dma-from-8bit final )
+dnl
+dnl this one should expand the hole
+dnl
+  DXE 1 at 0x00000000:
+              Offset      BlockCode  Address    Bytes      Argument
+    Block  1 0x00000000: 0xADEF5001 0xFFA00000 0x00000000 0x000090DC ( 8bit-dma-from-8bit ignore first )
+dnl Here we see that the hole makes sure to end at an offset of
+dnl (start+offset), or in this case, (0x30 + 0x70 == 0xA0) and that
+dnl the size of the hole was expanded from 0x70 to 0x80 to fill the
+dnl leading gap (since we couldn't split the punched block)
+    Block  2 0x00000010: 0xADD61001 0x00000000 0x00000080 0xBAADF00D ( 8bit-dma-from-8bit ignore )
+    Block  3 0x000000A0: 0xAD0E0001 0xFFA00000 0x000073AC 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  4 0x0000745C: 0xAD9D0001 0xFF800000 0x00001C70 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  5 0x000090DC: 0xAD738001 0xFFA00000 0x00000000 0x00000000 ( 8bit-dma-from-8bit final )
+dnl
+dnl this one should split the first load block into two pieces
+dnl
+  DXE 1 at 0x00000000:
+              Offset      Address     Bytes    Flags
+    Block  1 0x00000000: 0xFFA00000 0x0000002C 0x0002 ( resvect )
+dnl The important part is that the ignore block have an offset of
+dnl (start-block_header_size), or in this case, (0x40 - 10 == 0x36)
+    Block  2 0x00000036: 0x00000000 0x00000070 0x0012 ( resvect ignore )
+dnl Then we need to make sure that the next block has an offset of
+dnl (start+offset), or in this case, (0x40 + 0x70 == 0xB0)
+    Block  3 0x000000B0: 0xFFA0002C 0x00007380 0x0002 ( resvect )
+    Block  4 0x0000743A: 0xFF800000 0x00001C70 0x8002 ( resvect final )
+dnl
+dnl this one should expand the hole
+dnl
+  DXE 1 at 0x00000000:
+              Offset      Address     Bytes    Flags
+dnl Here we see that the hole makes sure to end at an offset of
+dnl (start+offset), or in this case, (0x10 + 0x70 == 0x80) and that
+dnl the size of the hole was expanded from 0x70 to 0x76 to fill the
+dnl leading gap (since we couldn't split the punched block)
+    Block  1 0x00000000: 0x00000000 0x00000076 0x0012 ( resvect ignore )
+    Block  2 0x00000080: 0xFFA00000 0x000073AC 0x0002 ( resvect )
+    Block  3 0x00007436: 0xFF800000 0x00001C70 0x8002 ( resvect final )
+])
+
+AT_LDR_CHECK([dnl
+LDR_BINARY -T bf526 -c final-split.ldr ELFS_DIR/final-split.elf -b 0x100
+LDR_BINARY -qs final-split.ldr
+], [0], [dnl
+Creating LDR final-split.ldr ...
+ Adding DXE 'elfs/final-split.elf' ... [[jump block to 0xFFA08000] [ELF block: 2048 @ 0xFFA08000]] OK!
+Done!
+  DXE 1 at 0x00000000:
+              Offset      BlockCode  Address    Bytes      Argument
+    Block  1 0x00000000: 0xAD075001 0xFFA00000 0x00000000 0x000008AC ( 8bit-dma-from-8bit ignore first )
+    Block  2 0x00000010: 0xADDD0001 0xFFA00000 0x0000000C 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  3 0x0000002C: 0xAD500001 0xFFA08000 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  4 0x0000013C: 0xAD510001 0xFFA08100 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  5 0x0000024C: 0xAD520001 0xFFA08200 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  6 0x0000035C: 0xAD530001 0xFFA08300 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  7 0x0000046C: 0xAD540001 0xFFA08400 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  8 0x0000057C: 0xAD550001 0xFFA08500 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block  9 0x0000068C: 0xAD560001 0xFFA08600 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block 10 0x0000079C: 0xAD570001 0xFFA08700 0x00000100 0xDEADBEEF ( 8bit-dma-from-8bit )
+    Block 11 0x000008AC: 0xAD738001 0xFFA00000 0x00000000 0x00000000 ( 8bit-dma-from-8bit final )
+])
+
+dnl verify both the bf53x and the bf54x handlers work the same way
+AT_LDR_CHECK([dnl
+LDR_BINARY --quiet -T bf523 -c excessive-split.ldr ELFS_DIR/final-split.elf --punchit 0x10000:0x10
+], [1], [], [ldr: Punching holes beyond the end of an LDR is not supported
+])
+AT_LDR_CHECK([dnl
+LDR_BINARY --quiet -T bf531 -c excessive-split.ldr ELFS_DIR/final-split.elf --punchit 0x10000:0x10
+], [1], [], [ldr: Punching holes beyond the end of an LDR is not supported
+])
+
+dnl verify the resvect flag is set properly for all bf53x/bf56x targets
+AT_LDR_CHECK([dnl
+for target in 531 532 533 534 536 537 538 539 561 ; do
+	for prefix in BF Bf bF bf ; do
+		echo LDR_BINARY -T $prefix$target -c res.ldr ELFS_DIR/POST.dxe
+		LDR_BINARY -T $prefix$target -c res.ldr ELFS_DIR/POST.dxe || exit 1
+		case ${target} in
+			531|532) exp="cleared";;
+			*)       exp="set";;
+		esac
+		LDR_BINARY -qs res.ldr
+		if LDR_BINARY -qs res.ldr | grep -qs resvect ; then
+			res="set"
+		else
+			res="cleared"
+		fi
+		if test "${exp}" != "${res}" ; then
+			echo "the expected resvect flag does not match reality for $prefix$target"
+			echo "  -- expected: '${exp}'"
+			echo "  -- reality:  '${res}'"
+			exit 1
+		else
+			echo
+		fi
+	done
+done
+], [0], [ignore], [ignore])
+
+dnl make sure we dont accept invalid targets
+AT_LDR_CHECK([dnl
+for inv in -f -c f- c- "" a b c bf BF 1 2 3 BF1111 bf000 ; do
+	dnl echo LDR_BINARY -T "${inv}" -c /bin/sh
+	LDR_BINARY -T "${inv}" -c /bin/sh
+done
+], [1], [], [dnl
+ldr: unable to handle specified target: -f
+ldr: unable to handle specified target: -c
+ldr: unable to handle specified target: f-
+ldr: unable to handle specified target: c-
+ldr: unable to handle specified target: 
+ldr: unable to handle specified target: a
+ldr: unable to handle specified target: b
+ldr: unable to handle specified target: c
+ldr: unable to handle specified target: bf
+ldr: unable to handle specified target: BF
+ldr: unable to handle specified target: 1
+ldr: unable to handle specified target: 2
+ldr: unable to handle specified target: 3
+ldr: unable to handle specified target: BF1111
+ldr: unable to handle specified target: bf000
+])
+
+AT_CLEANUP

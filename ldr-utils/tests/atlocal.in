@@ -1,0 +1,2 @@
+export PATH=$abs_top_builddir:$abs_builddir:$PATH
+export LDR_UTILS_TESTING=yes

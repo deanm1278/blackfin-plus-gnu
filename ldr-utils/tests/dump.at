@@ -1,0 +1,54 @@
+AT_SETUP(dump)
+
+AT_LDR_CHECK([
+for ldr in LDRS_DIR/*.ldr ; do
+	rm -f *.ldr*
+	cp $ldr .
+	LDR_BINARY --dump *.ldr
+	md5sum *.ldr-* | sort
+	echo
+done
+], [0], [dnl
+Dumping LDR bf548.ldr ...
+  Dumping DXE 0 to bf548.ldr-0.dxe
+    Dumping block 1 to bf548.ldr-0.dxe-1.block
+    Dumping block 2 to bf548.ldr-0.dxe-2.block
+    Dumping block 21 to bf548.ldr-0.dxe-21.block
+    Dumping block 30 to bf548.ldr-0.dxe-30.block
+00804a16f0bf0f5bd8b1cabe8f1f290e  bf548.ldr-0.dxe-2.block
+d2b116e385231c0a3fa476a5900e4874  bf548.ldr-0.dxe-21.block
+d2e98f6ad70477c30ac8f32ab2745364  bf548.ldr-0.dxe
+d41d8cd98f00b204e9800998ecf8427e  bf548.ldr-0.dxe-1.block
+d41d8cd98f00b204e9800998ecf8427e  bf548.ldr-0.dxe-30.block
+
+Dumping LDR spi.ldr ...
+  Dumping DXE 0 to spi.ldr-0.dxe
+    Dumping block 1 to spi.ldr-0.dxe-1.block
+    Dumping block 2 to spi.ldr-0.dxe-2.block
+    Dumping block 3 to spi.ldr-0.dxe-3.block
+    Dumping block 4 to spi.ldr-0.dxe-4.block
+    Dumping block 5 to spi.ldr-0.dxe-5.block
+16dbf1ec34edbd962162ca65a6ac8e88  spi.ldr-0.dxe-4.block
+a0acdfcef7e8852e25e9030d42fc8bee  spi.ldr-0.dxe-3.block
+a5543a86eddef664a26113b79ea1c2cf  spi.ldr-0.dxe-2.block
+b698656a2b8a41f14d896563a553f295  spi.ldr-0.dxe
+c72ef8fb02b50b998531f4a4446a943d  spi.ldr-0.dxe-1.block
+fd73a9855486c9baa0b7c304086c7d53  spi.ldr-0.dxe-5.block
+
+Dumping LDR uart.ldr ...
+  Dumping DXE 0 to uart.ldr-0.dxe
+    Dumping block 1 to uart.ldr-0.dxe-1.block
+    Dumping block 2 to uart.ldr-0.dxe-2.block
+    Dumping block 3 to uart.ldr-0.dxe-3.block
+    Dumping block 4 to uart.ldr-0.dxe-4.block
+    Dumping block 5 to uart.ldr-0.dxe-5.block
+06c2ec394e4df3d49a5022c6b11d0206  uart.ldr-0.dxe-2.block
+16dbf1ec34edbd962162ca65a6ac8e88  uart.ldr-0.dxe-4.block
+262e9ca1c67064192a6fc3f21cac651e  uart.ldr-0.dxe-3.block
+36a48df5fdc011b61d4c69d0072fe600  uart.ldr-0.dxe-5.block
+60b295ab5b4f43001e28a920f438845b  uart.ldr-0.dxe
+9fbff9e7c1d1481c63f04f4a78b4156d  uart.ldr-0.dxe-1.block
+
+])
+
+AT_CLEANUP

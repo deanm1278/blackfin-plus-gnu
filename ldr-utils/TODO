@@ -1,0 +1,69 @@
+Add support for reading LDR files in Intel hex format:
+	ldr.c _ldr_read_hex()
+
+Add support for reading LDR files in Motorola s-record format:
+	ldr.c _ldr_read_srec()
+
+Move target-specific options into lfd files (--create -> gpio/port/dma)
+
+Document/comment more things
+
+Tweak ELF code to handle LSB/MSB 32bit/64bit ... not really needed until we
+	have a blackfin chip that handles MSB or 64bit ...
+
+Code base not entirely clean with large file handling on 32bit systems.  But
+	it isn't realistic to have an LDR that large, so don't really care ...
+
+Parse ELF '.processor' section which VDSP produces ?
+	Format of .processor:
+		byte offset into .strtab section for null terminated string which
+		represents the processor this ELF is for
+		$ readelf -x 4 a.dxe
+		  0x00000000 1c000000                            ....
+		so 0x1c bytes into the .strtab section is:
+		41445350 2d424635 333500        ADSP-BF535.
+	Format of .attributes:
+		null terminated strings and each string is tab delimited format:
+			key\tvalue
+		useful because there is a si-revision key in there:
+		73692d72 65766973 696f6e09 312e3300     si-revision.1.3.
+		as well as
+	While .processor is only present in final linked VDSP ELFs (*.dxe),
+	.attributes can be found in both the relocatable objects (*.doj/*.o)
+	as well as the final linked ELF.  In the relocatable object, there
+	is a 'si-revision' and a 'processor-id' field in .attributes while
+	in the final linked ELF, only 'si-revision' shows up.
+
+VDSP does not fully enumerate the program header table, so no
+	DXE blocks are made for bss sections ... do we care ?
+
+Integrate into binutils BFD ?
+
+Add support for intermediate stages:
+	- compression (zlib/lzma/bzip2/etc...)
+	- encryption
+	- hashes (crc)
+
+Verify multi-DXE works for BF548 ... when DXE_FINAL is set, we scan to the
+	start of the file and clobber argument ...
+
+Make sure we treat the count field as signed or unsigned depending on
+	how it's used.
+
+Add an -o for output option to be like toolchain.
+
+Build up the LDR in memory before writing it all out to disk.  This way we can
+	do validation on the LDR and not have to worry about seeking all over the
+	disk.
+
+Check that the incoming ELF does not load on top of the trampoline block with
+	sections that are not the entry point.
+
+One PHDR gets split for sections ?
+  LOAD           0x001000 0x01fc0000 0x01fc0000 0x13a8c 0x13a8c RWE 0x1000
+   00     .text .rodata .data .u_boot_cmd
+    Block  2 0x0000012A: 0x01FC0000 0x00003EC2 0x0000 ( )
+    Block  3 0x00003FF6: 0x00000000 0x00002000 0x0010 ( ignore )
+    Block  4 0x00006000: 0x01FC3EC2 0x0000C13E 0x0000 ( )
+    Block  5 0x00012148: 0x01FD0000 0x00003A8C 0x0000 ( )
+

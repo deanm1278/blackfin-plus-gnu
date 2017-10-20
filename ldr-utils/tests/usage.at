@@ -1,0 +1,44 @@
+AT_SETUP(usage)
+
+AT_LDR_CHECK(LDR_BINARY,           [1], [ignore], [])
+AT_LDR_CHECK(LDR_BINARY -h,        [0], [ignore], [])
+AT_LDR_CHECK(LDR_BINARY --help,    [0], [ignore], [])
+AT_LDR_CHECK(LDR_BINARY --version, [0], [ignore], [])
+AT_LDR_CHECK(LDR_BINARY --moo-moo, [1], [], [ignore])
+
+AT_LDR_CHECK(LDR_BINARY -T BAD .,  [1], [], [dnl
+ldr: unable to handle specified target: BAD
+])
+
+AT_LDR_CHECK([dnl
+for target in \
+504 506 \
+512 514 516 518 \
+522 523 524 525 526 527 \
+531 532 533 534 536 537 538 539 \
+542 544 547 548 549 542M 544M 547M 548M 549M \
+561 \
+606 607 608 609 \
+; do
+	for prefix in BF Bf bF bf ; do
+		if ! LDR_BINARY -T $prefix$target --show -h ; then
+			echo "Failed at $prefix$target"
+			exit 1
+		fi
+		if ! LDR_BINARY -T $prefix$target-0.1 --show -h ; then
+			echo "Failed at $prefix$target-0.1"
+			exit 1
+		fi
+		if LDR_BINARY -T MEW$prefix$target-0.1 --show -h ; then
+			echo "Failed at MEW$prefix$target-0.1"
+			exit 1
+		fi
+		if LDR_BINARY -T $prefix$target+0.1 --show -h ; then
+			echo "Failed at $prefix$target+0.1"
+			exit 1
+		fi
+	done
+done
+], [0], [ignore], [ignore])
+
+AT_CLEANUP

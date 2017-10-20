@@ -1,0 +1,34 @@
+-------
+ ABOUT 
+-------
+
+ldr-utils is a simple command line program for handling LDR files.  LDR files 
+are the executable format for the Blackfin on-chip Boot ROM.  We need to handle
+this format for initial booting of the processor (so boot loaders or bare metal
+applications).
+
+To put it simply, LDRs are just a container format for DXEs (which are just a
+fancy name for programs in the Blackfin binary object code format).  A single
+LDR is made up of an arbitrary number of DXEs and a single DXE is made up of
+an arbitrary number of blocks (each block contains starting address and some
+flags).
+
+
+------
+ HELP
+------
+
+Support: http://blackfin.uclinux.org/gf/project/toolchain/forum/
+Bugs:    http://blackfin.uclinux.org/gf/project/toolchain/tracker/
+
+
+------------
+ REFERENCES 
+------------
+
+All manuals can be found here:
+ http://www.analog.com/processors/blackfin/technicalLibrary/manuals/
+
+The interesting ones for LDR formats / booting:
+ - VisualDSP++ 5.0 Loader and Utilities Manual
+ - The System & Booting chapter in the HRM for your Blackfin variant

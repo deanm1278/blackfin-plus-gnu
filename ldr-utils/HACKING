@@ -1,0 +1,48 @@
+--------
+ Layout
+--------
+
+Blackfin defines/code to stick dynamic Blackfin opcodes into LDR blocks.
+ blackfin_defines.h
+ dxe_jump.h
+ dxes.h
+
+Hide all portability / system headers here.
+ headers.h
+
+Utility functions to streamline memory/error/etc... handling.
+ helpers.c
+ helpers.h
+
+User interface code for working with LDRs.
+ ldr.c
+ ldr.h
+
+Simple library code for working with ELFs.
+ ldr_elf.c
+ ldr_elf.h
+
+Common LDR File Descriptor (LFD) code.
+ lfd.c
+ lfd.h
+
+Processor specific LDR implementations.
+ lfd_bf###.c
+
+--------------
+ Interactions
+--------------
+
+Users interact with ldr.c in order to create/view/load/whatever LDRs.  The
+ldr.c file uses common functions in lfd.c to perform the requested steps.  The
+common lfd.c code dives down into processor specific lfd_xxx.c files as needed.
+
+When creating LDRs from ELF objects, lfd.c uses functions in ldr_elf.c.  As
+needed, chunks of Blackfin opcodes are customized and inserted into the LDR
+from the dxe headers.
+
+All code uses the helper functions in helpers.c.
+
+The headers.h creates a sane uniform environment for the rest of the code to
+work.  This way the rest of the code base stays clean of painful ifdef's that
+are needed only for portability.

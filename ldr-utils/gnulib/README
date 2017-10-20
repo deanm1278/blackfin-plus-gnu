@@ -1,0 +1,6 @@
+none of the code in this tree is maintained by us.  it is imported wholesale
+from the gnulib project:
+http://www.gnu.org/software/gnulib/
+
+see the toplevel autogen.sh (running of `gnulib-tool`) and the toplevel
+configure.ac (added to building only if your system fails at life)

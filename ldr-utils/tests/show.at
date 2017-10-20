@@ -1,0 +1,404 @@
+AT_SETUP(show)
+
+AT_LDR_CHECK(LDR_BINARY --quiet --show nonexistent.ldr, [1], [], [ignore])
+
+AT_CHECK(LDR_BINARY -q -s /bin/sh, [1], [], [dnl
+ldr: unable to auto-detect target type of LDR: /bin/sh
+ldr: please select a target with -T <target>
+])
+
+AT_LDR_CHECK([
+for ldr in LDRS_DIR/*.ldr ; do
+	LDR_BINARY --verbose --show $ldr
+	echo
+	LDR_BINARY --show $ldr
+	echo
+	LDR_BINARY --quiet --show $ldr
+	echo
+done
+], [0], [dnl
+Showing LDR ldrs/bf548.ldr ...
+auto detected LDR as 'BF548' compatible format
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+		Target Address: 0xFFA00000 ( L1 )
+		    Block Code: 0xADF55006
+		    Byte Count: 0x00000000 ( 0 bytes )
+		      Argument: 0x00004312 ( 16bit-dma-from-16bit ignore first )
+    Block  2 at 0x00000010
+		Target Address: 0xFF800000 ( L1 )
+		    Block Code: 0xADC30106
+		    Byte Count: 0x00000016 ( 22 bytes )
+		      Argument: 0x00000000 ( !!cntalgn!! 16bit-dma-from-16bit fill )
+    Block  3 at 0x00000020
+		Target Address: 0xFF800016 ( L1 )
+		    Block Code: 0xADFC0006
+		    Byte Count: 0x00000C32 ( 3122 bytes )
+		      Argument: 0x00000000 ( !!addralgn!! !!cntalgn!! 16bit-dma-from-16bit )
+    Block  4 at 0x00000C62
+		Target Address: 0xFF800C48 ( L1 )
+		    Block Code: 0xAD890106
+		    Byte Count: 0x00000018 ( 24 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  5 at 0x00000C72
+		Target Address: 0xFF800C60 ( L1 )
+		    Block Code: 0xAD940006
+		    Byte Count: 0x0000002C ( 44 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block  6 at 0x00000CAE
+		Target Address: 0xFF800C8C ( L1 )
+		    Block Code: 0xAD750106
+		    Byte Count: 0x00000020 ( 32 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  7 at 0x00000CBE
+		Target Address: 0xFF800CAC ( L1 )
+		    Block Code: 0xAD400006
+		    Byte Count: 0x00000034 ( 52 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block  8 at 0x00000D02
+		Target Address: 0xFF800CE0 ( L1 )
+		    Block Code: 0xAD7D0106
+		    Byte Count: 0x00000044 ( 68 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  9 at 0x00000D12
+		Target Address: 0xFF800D24 ( L1 )
+		    Block Code: 0xADF90006
+		    Byte Count: 0x00000004 ( 4 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 10 at 0x00000D26
+		Target Address: 0xFF800D28 ( L1 )
+		    Block Code: 0xADB40106
+		    Byte Count: 0x00000044 ( 68 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 11 at 0x00000D36
+		Target Address: 0xFF800D6C ( L1 )
+		    Block Code: 0xADB10006
+		    Byte Count: 0x00000004 ( 4 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 12 at 0x00000D4A
+		Target Address: 0xFF800D70 ( L1 )
+		    Block Code: 0xADEC0106
+		    Byte Count: 0x00000044 ( 68 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 13 at 0x00000D5A
+		Target Address: 0xFF800DB4 ( L1 )
+		    Block Code: 0xAD7D0006
+		    Byte Count: 0x00000010 ( 16 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 14 at 0x00000D7A
+		Target Address: 0xFF800DC4 ( L1 )
+		    Block Code: 0xAD280106
+		    Byte Count: 0x00000034 ( 52 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 15 at 0x00000D8A
+		Target Address: 0xFF800DF8 ( L1 )
+		    Block Code: 0xAD290006
+		    Byte Count: 0x00000008 ( 8 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 16 at 0x00000DA2
+		Target Address: 0xFF800E00 ( L1 )
+		    Block Code: 0xADCF0106
+		    Byte Count: 0x00000014 ( 20 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 17 at 0x00000DB2
+		Target Address: 0xFF800E14 ( L1 )
+		    Block Code: 0xADEA0006
+		    Byte Count: 0x00000024 ( 36 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 18 at 0x00000DE6
+		Target Address: 0xFF800E38 ( L1 )
+		    Block Code: 0xADAA0106
+		    Byte Count: 0x00000148 ( 328 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 19 at 0x00000DF6
+		Target Address: 0xFF800F80 ( L1 )
+		    Block Code: 0xADAE0006
+		    Byte Count: 0x000001F4 ( 500 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 20 at 0x00000FFA
+		Target Address: 0xFF801174 ( L1 )
+		    Block Code: 0xAD310106
+		    Byte Count: 0x00000180 ( 384 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 21 at 0x0000100A
+		Target Address: 0xFFA00000 ( L1 )
+		    Block Code: 0xAD4E0006
+		    Byte Count: 0x000006BC ( 1724 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 22 at 0x000016D6
+		Target Address: 0xFFA006BC ( L1 )
+		    Block Code: 0xAD190106
+		    Byte Count: 0x0000001C ( 28 bytes )
+		      Argument: 0x00004208 ( 16bit-dma-from-16bit fill )
+    Block 23 at 0x000016E6
+		Target Address: 0xFFA006D8 ( L1 )
+		    Block Code: 0xADCA0006
+		    Byte Count: 0x000000E0 ( 224 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 24 at 0x000017D6
+		Target Address: 0xFFA007B8 ( L1 )
+		    Block Code: 0xAD380106
+		    Byte Count: 0x00000020 ( 32 bytes )
+		      Argument: 0x00004210 ( 16bit-dma-from-16bit fill )
+    Block 25 at 0x000017E6
+		Target Address: 0xFFA007D8 ( L1 )
+		    Block Code: 0xAD960006
+		    Byte Count: 0x000001BC ( 444 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 26 at 0x000019B2
+		Target Address: 0xFFA00994 ( L1 )
+		    Block Code: 0xAD3E0106
+		    Byte Count: 0x0000001C ( 28 bytes )
+		      Argument: 0x00004208 ( 16bit-dma-from-16bit fill )
+    Block 27 at 0x000019C2
+		Target Address: 0xFFA009B0 ( L1 )
+		    Block Code: 0xAD950006
+		    Byte Count: 0x000000D8 ( 216 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 28 at 0x00001AAA
+		Target Address: 0xFFA00A88 ( L1 )
+		    Block Code: 0xAD0F0106
+		    Byte Count: 0x00000020 ( 32 bytes )
+		      Argument: 0x0000421A ( 16bit-dma-from-16bit fill )
+    Block 29 at 0x00001ABA
+		Target Address: 0xFFA00AA8 ( L1 )
+		    Block Code: 0xAD360006
+		    Byte Count: 0x00002848 ( 10312 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 30 at 0x00004312
+		Target Address: 0xFFA00000 ( L1 )
+		    Block Code: 0xAD748006
+		    Byte Count: 0x00000000 ( 0 bytes )
+		      Argument: 0x00000000 ( 16bit-dma-from-16bit final )
+
+Showing LDR ldrs/bf548.ldr ...
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+         Addr: 0xFFA00000 BCode: 0xADF55006 Bytes: 0x00000000 Args: 0x00004312 ( 16bit-dma-from-16bit ignore first )
+    Block  2 at 0x00000010
+         Addr: 0xFF800000 BCode: 0xADC30106 Bytes: 0x00000016 Args: 0x00000000 ( !!cntalgn!! 16bit-dma-from-16bit fill )
+    Block  3 at 0x00000020
+         Addr: 0xFF800016 BCode: 0xADFC0006 Bytes: 0x00000C32 Args: 0x00000000 ( !!addralgn!! !!cntalgn!! 16bit-dma-from-16bit )
+    Block  4 at 0x00000C62
+         Addr: 0xFF800C48 BCode: 0xAD890106 Bytes: 0x00000018 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  5 at 0x00000C72
+         Addr: 0xFF800C60 BCode: 0xAD940006 Bytes: 0x0000002C Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block  6 at 0x00000CAE
+         Addr: 0xFF800C8C BCode: 0xAD750106 Bytes: 0x00000020 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  7 at 0x00000CBE
+         Addr: 0xFF800CAC BCode: 0xAD400006 Bytes: 0x00000034 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block  8 at 0x00000D02
+         Addr: 0xFF800CE0 BCode: 0xAD7D0106 Bytes: 0x00000044 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  9 at 0x00000D12
+         Addr: 0xFF800D24 BCode: 0xADF90006 Bytes: 0x00000004 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 10 at 0x00000D26
+         Addr: 0xFF800D28 BCode: 0xADB40106 Bytes: 0x00000044 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 11 at 0x00000D36
+         Addr: 0xFF800D6C BCode: 0xADB10006 Bytes: 0x00000004 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 12 at 0x00000D4A
+         Addr: 0xFF800D70 BCode: 0xADEC0106 Bytes: 0x00000044 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 13 at 0x00000D5A
+         Addr: 0xFF800DB4 BCode: 0xAD7D0006 Bytes: 0x00000010 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 14 at 0x00000D7A
+         Addr: 0xFF800DC4 BCode: 0xAD280106 Bytes: 0x00000034 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 15 at 0x00000D8A
+         Addr: 0xFF800DF8 BCode: 0xAD290006 Bytes: 0x00000008 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 16 at 0x00000DA2
+         Addr: 0xFF800E00 BCode: 0xADCF0106 Bytes: 0x00000014 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 17 at 0x00000DB2
+         Addr: 0xFF800E14 BCode: 0xADEA0006 Bytes: 0x00000024 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 18 at 0x00000DE6
+         Addr: 0xFF800E38 BCode: 0xADAA0106 Bytes: 0x00000148 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 19 at 0x00000DF6
+         Addr: 0xFF800F80 BCode: 0xADAE0006 Bytes: 0x000001F4 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 20 at 0x00000FFA
+         Addr: 0xFF801174 BCode: 0xAD310106 Bytes: 0x00000180 Args: 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 21 at 0x0000100A
+         Addr: 0xFFA00000 BCode: 0xAD4E0006 Bytes: 0x000006BC Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 22 at 0x000016D6
+         Addr: 0xFFA006BC BCode: 0xAD190106 Bytes: 0x0000001C Args: 0x00004208 ( 16bit-dma-from-16bit fill )
+    Block 23 at 0x000016E6
+         Addr: 0xFFA006D8 BCode: 0xADCA0006 Bytes: 0x000000E0 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 24 at 0x000017D6
+         Addr: 0xFFA007B8 BCode: 0xAD380106 Bytes: 0x00000020 Args: 0x00004210 ( 16bit-dma-from-16bit fill )
+    Block 25 at 0x000017E6
+         Addr: 0xFFA007D8 BCode: 0xAD960006 Bytes: 0x000001BC Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 26 at 0x000019B2
+         Addr: 0xFFA00994 BCode: 0xAD3E0106 Bytes: 0x0000001C Args: 0x00004208 ( 16bit-dma-from-16bit fill )
+    Block 27 at 0x000019C2
+         Addr: 0xFFA009B0 BCode: 0xAD950006 Bytes: 0x000000D8 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 28 at 0x00001AAA
+         Addr: 0xFFA00A88 BCode: 0xAD0F0106 Bytes: 0x00000020 Args: 0x0000421A ( 16bit-dma-from-16bit fill )
+    Block 29 at 0x00001ABA
+         Addr: 0xFFA00AA8 BCode: 0xAD360006 Bytes: 0x00002848 Args: 0x00000000 ( 16bit-dma-from-16bit )
+    Block 30 at 0x00004312
+         Addr: 0xFFA00000 BCode: 0xAD748006 Bytes: 0x00000000 Args: 0x00000000 ( 16bit-dma-from-16bit final )
+
+  DXE 1 at 0x00000000:
+              Offset      BlockCode  Address    Bytes      Argument
+    Block  1 0x00000000: 0xADF55006 0xFFA00000 0x00000000 0x00004312 ( 16bit-dma-from-16bit ignore first )
+    Block  2 0x00000010: 0xADC30106 0xFF800000 0x00000016 0x00000000 ( !!cntalgn!! 16bit-dma-from-16bit fill )
+    Block  3 0x00000020: 0xADFC0006 0xFF800016 0x00000C32 0x00000000 ( !!addralgn!! !!cntalgn!! 16bit-dma-from-16bit )
+    Block  4 0x00000C62: 0xAD890106 0xFF800C48 0x00000018 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  5 0x00000C72: 0xAD940006 0xFF800C60 0x0000002C 0x00000000 ( 16bit-dma-from-16bit )
+    Block  6 0x00000CAE: 0xAD750106 0xFF800C8C 0x00000020 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  7 0x00000CBE: 0xAD400006 0xFF800CAC 0x00000034 0x00000000 ( 16bit-dma-from-16bit )
+    Block  8 0x00000D02: 0xAD7D0106 0xFF800CE0 0x00000044 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block  9 0x00000D12: 0xADF90006 0xFF800D24 0x00000004 0x00000000 ( 16bit-dma-from-16bit )
+    Block 10 0x00000D26: 0xADB40106 0xFF800D28 0x00000044 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 11 0x00000D36: 0xADB10006 0xFF800D6C 0x00000004 0x00000000 ( 16bit-dma-from-16bit )
+    Block 12 0x00000D4A: 0xADEC0106 0xFF800D70 0x00000044 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 13 0x00000D5A: 0xAD7D0006 0xFF800DB4 0x00000010 0x00000000 ( 16bit-dma-from-16bit )
+    Block 14 0x00000D7A: 0xAD280106 0xFF800DC4 0x00000034 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 15 0x00000D8A: 0xAD290006 0xFF800DF8 0x00000008 0x00000000 ( 16bit-dma-from-16bit )
+    Block 16 0x00000DA2: 0xADCF0106 0xFF800E00 0x00000014 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 17 0x00000DB2: 0xADEA0006 0xFF800E14 0x00000024 0x00000000 ( 16bit-dma-from-16bit )
+    Block 18 0x00000DE6: 0xADAA0106 0xFF800E38 0x00000148 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 19 0x00000DF6: 0xADAE0006 0xFF800F80 0x000001F4 0x00000000 ( 16bit-dma-from-16bit )
+    Block 20 0x00000FFA: 0xAD310106 0xFF801174 0x00000180 0x00000000 ( 16bit-dma-from-16bit fill )
+    Block 21 0x0000100A: 0xAD4E0006 0xFFA00000 0x000006BC 0x00000000 ( 16bit-dma-from-16bit )
+    Block 22 0x000016D6: 0xAD190106 0xFFA006BC 0x0000001C 0x00004208 ( 16bit-dma-from-16bit fill )
+    Block 23 0x000016E6: 0xADCA0006 0xFFA006D8 0x000000E0 0x00000000 ( 16bit-dma-from-16bit )
+    Block 24 0x000017D6: 0xAD380106 0xFFA007B8 0x00000020 0x00004210 ( 16bit-dma-from-16bit fill )
+    Block 25 0x000017E6: 0xAD960006 0xFFA007D8 0x000001BC 0x00000000 ( 16bit-dma-from-16bit )
+    Block 26 0x000019B2: 0xAD3E0106 0xFFA00994 0x0000001C 0x00004208 ( 16bit-dma-from-16bit fill )
+    Block 27 0x000019C2: 0xAD950006 0xFFA009B0 0x000000D8 0x00000000 ( 16bit-dma-from-16bit )
+    Block 28 0x00001AAA: 0xAD0F0106 0xFFA00A88 0x00000020 0x0000421A ( 16bit-dma-from-16bit fill )
+    Block 29 0x00001ABA: 0xAD360006 0xFFA00AA8 0x00002848 0x00000000 ( 16bit-dma-from-16bit )
+    Block 30 0x00004312: 0xAD748006 0xFFA00000 0x00000000 0x00000000 ( 16bit-dma-from-16bit final )
+
+Showing LDR ldrs/spi.ldr ...
+auto detected LDR as 'BF537' compatible format
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+		Target Address: 0xFF800040 ( L1 )
+		    Byte Count: 0x00000004 ( 4 bytes )
+		         Flags: 0x0012     ( resvect ignore )
+    Block  2 at 0x0000000E
+		Target Address: 0xFFA00000 ( L1 )
+		    Byte Count: 0x00000108 ( 264 bytes )
+		         Flags: 0x000A     ( resvect init )
+    Block  3 at 0x00000120
+		Target Address: 0xFF800040 ( L1 )
+		    Byte Count: 0x00000004 ( 4 bytes )
+		         Flags: 0x0012     ( resvect ignore )
+    Block  4 at 0x0000012E
+		Target Address: 0xFFA00000 ( L1 )
+		    Byte Count: 0x0000000C ( 12 bytes )
+		         Flags: 0x0002     ( resvect )
+    Block  5 at 0x00000144
+		Target Address: 0x00001000 ( SDRAM )
+		    Byte Count: 0x00008000 ( 32768 bytes )
+		         Flags: 0x0002     ( resvect )
+    Block  6 at 0x0000814E
+		Target Address: 0x00009000 ( SDRAM )
+		    Byte Count: 0x00008000 ( 32768 bytes )
+		         Flags: 0x0002     ( resvect )
+    Block  7 at 0x00010158
+		Target Address: 0x00011000 ( SDRAM )
+		    Byte Count: 0x00008000 ( 32768 bytes )
+		         Flags: 0x0002     ( resvect )
+    Block  8 at 0x00018162
+		Target Address: 0x00019000 ( SDRAM )
+		    Byte Count: 0x00006FD8 ( 28632 bytes )
+		         Flags: 0x8002     ( resvect final )
+
+Showing LDR ldrs/spi.ldr ...
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+         Addr: 0xFF800040 Bytes: 0x00000004 Flags: 0x0012 ( resvect ignore )
+    Block  2 at 0x0000000E
+         Addr: 0xFFA00000 Bytes: 0x00000108 Flags: 0x000A ( resvect init )
+    Block  3 at 0x00000120
+         Addr: 0xFF800040 Bytes: 0x00000004 Flags: 0x0012 ( resvect ignore )
+    Block  4 at 0x0000012E
+         Addr: 0xFFA00000 Bytes: 0x0000000C Flags: 0x0002 ( resvect )
+    Block  5 at 0x00000144
+         Addr: 0x00001000 Bytes: 0x00008000 Flags: 0x0002 ( resvect )
+    Block  6 at 0x0000814E
+         Addr: 0x00009000 Bytes: 0x00008000 Flags: 0x0002 ( resvect )
+    Block  7 at 0x00010158
+         Addr: 0x00011000 Bytes: 0x00008000 Flags: 0x0002 ( resvect )
+    Block  8 at 0x00018162
+         Addr: 0x00019000 Bytes: 0x00006FD8 Flags: 0x8002 ( resvect final )
+
+  DXE 1 at 0x00000000:
+              Offset      Address     Bytes    Flags
+    Block  1 0x00000000: 0xFF800040 0x00000004 0x0012 ( resvect ignore )
+    Block  2 0x0000000E: 0xFFA00000 0x00000108 0x000A ( resvect init )
+    Block  3 0x00000120: 0xFF800040 0x00000004 0x0012 ( resvect ignore )
+    Block  4 0x0000012E: 0xFFA00000 0x0000000C 0x0002 ( resvect )
+    Block  5 0x00000144: 0x00001000 0x00008000 0x0002 ( resvect )
+    Block  6 0x0000814E: 0x00009000 0x00008000 0x0002 ( resvect )
+    Block  7 0x00010158: 0x00011000 0x00008000 0x0002 ( resvect )
+    Block  8 0x00018162: 0x00019000 0x00006FD8 0x8002 ( resvect final )
+
+Showing LDR ldrs/uart.ldr ...
+auto detected LDR as 'BF537' compatible format
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+		Target Address: 0xFF800040 ( L1 )
+		    Byte Count: 0x00000004 ( 4 bytes )
+		         Flags: 0x04D2     ( portg gpio6 resvect ignore )
+    Block  2 at 0x0000000E
+		Target Address: 0xFFA00000 ( L1 )
+		    Byte Count: 0x00000098 ( 152 bytes )
+		         Flags: 0x04CA     ( portg gpio6 resvect init )
+    Block  3 at 0x000000B0
+		Target Address: 0xFF800040 ( L1 )
+		    Byte Count: 0x00000004 ( 4 bytes )
+		         Flags: 0x04D2     ( portg gpio6 resvect ignore )
+    Block  4 at 0x000000BE
+		Target Address: 0xFFA00000 ( L1 )
+		    Byte Count: 0x0000000C ( 12 bytes )
+		         Flags: 0x04C2     ( portg gpio6 resvect )
+    Block  5 at 0x000000D4
+		Target Address: 0x00001000 ( SDRAM )
+		    Byte Count: 0x00008000 ( 32768 bytes )
+		         Flags: 0x04C2     ( portg gpio6 resvect )
+    Block  6 at 0x000080DE
+		Target Address: 0x00009000 ( SDRAM )
+		    Byte Count: 0x00008000 ( 32768 bytes )
+		         Flags: 0x04C2     ( portg gpio6 resvect )
+    Block  7 at 0x000100E8
+		Target Address: 0x00011000 ( SDRAM )
+		    Byte Count: 0x00008000 ( 32768 bytes )
+		         Flags: 0x04C2     ( portg gpio6 resvect )
+    Block  8 at 0x000180F2
+		Target Address: 0x00019000 ( SDRAM )
+		    Byte Count: 0x00002C00 ( 11264 bytes )
+		         Flags: 0x84C2     ( portg gpio6 resvect final )
+
+Showing LDR ldrs/uart.ldr ...
+  DXE 1 at 0x00000000:
+    Block  1 at 0x00000000
+         Addr: 0xFF800040 Bytes: 0x00000004 Flags: 0x04D2 ( portg gpio6 resvect ignore )
+    Block  2 at 0x0000000E
+         Addr: 0xFFA00000 Bytes: 0x00000098 Flags: 0x04CA ( portg gpio6 resvect init )
+    Block  3 at 0x000000B0
+         Addr: 0xFF800040 Bytes: 0x00000004 Flags: 0x04D2 ( portg gpio6 resvect ignore )
+    Block  4 at 0x000000BE
+         Addr: 0xFFA00000 Bytes: 0x0000000C Flags: 0x04C2 ( portg gpio6 resvect )
+    Block  5 at 0x000000D4
+         Addr: 0x00001000 Bytes: 0x00008000 Flags: 0x04C2 ( portg gpio6 resvect )
+    Block  6 at 0x000080DE
+         Addr: 0x00009000 Bytes: 0x00008000 Flags: 0x04C2 ( portg gpio6 resvect )
+    Block  7 at 0x000100E8
+         Addr: 0x00011000 Bytes: 0x00008000 Flags: 0x04C2 ( portg gpio6 resvect )
+    Block  8 at 0x000180F2
+         Addr: 0x00019000 Bytes: 0x00002C00 Flags: 0x84C2 ( portg gpio6 resvect final )
+
+  DXE 1 at 0x00000000:
+              Offset      Address     Bytes    Flags
+    Block  1 0x00000000: 0xFF800040 0x00000004 0x04D2 ( portg gpio6 resvect ignore )
+    Block  2 0x0000000E: 0xFFA00000 0x00000098 0x04CA ( portg gpio6 resvect init )
+    Block  3 0x000000B0: 0xFF800040 0x00000004 0x04D2 ( portg gpio6 resvect ignore )
+    Block  4 0x000000BE: 0xFFA00000 0x0000000C 0x04C2 ( portg gpio6 resvect )
+    Block  5 0x000000D4: 0x00001000 0x00008000 0x04C2 ( portg gpio6 resvect )
+    Block  6 0x000080DE: 0x00009000 0x00008000 0x04C2 ( portg gpio6 resvect )
+    Block  7 0x000100E8: 0x00011000 0x00008000 0x04C2 ( portg gpio6 resvect )
+    Block  8 0x000180F2: 0x00019000 0x00002C00 0x84C2 ( portg gpio6 resvect final )
+
+])
+
+AT_CLEANUP

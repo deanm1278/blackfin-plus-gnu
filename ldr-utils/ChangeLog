@@ -1,0 +1,837 @@
+------------------------------------------------------------------------
+r5853 | sonicz | 2012-05-02 02:16:30 -0400 (Wed, 02 May 2012) | 7 lines
+
+ldr-utils: Change the flags of DXE_BLOCK_FIRST block only for BF548 family.
+
+Mike points out that this block is to see the load address explicitly
+if the target needs it. This work around is only for BF548 family boot rom.
+
+
+
+------------------------------------------------------------------------
+r5832 | sonicz | 2012-04-05 03:15:19 -0400 (Thu, 05 Apr 2012) | 6 lines
+
+ldr-utils: revert the changes to the flags of DXE_BLOCK_FIRST block
+
+Mike points out that this block is to see the load address explicitly
+if the target needs it.
+
+
+------------------------------------------------------------------------
+r5831 | vapier | 2012-04-04 23:33:55 -0400 (Wed, 04 Apr 2012) | 1 line
+
+ldr-utils: fix style with tertiary op
+------------------------------------------------------------------------
+r5823 | vapier | 2012-03-29 23:52:03 -0400 (Thu, 29 Mar 2012) | 1 line
+
+ldr-utils: fix usage text in new bf60x code
+------------------------------------------------------------------------
+r5822 | vapier | 2012-03-29 23:42:33 -0400 (Thu, 29 Mar 2012) | 1 line
+
+ldr-utils: add new 60x cpus to usage test
+------------------------------------------------------------------------
+r5821 | vapier | 2012-03-29 23:40:30 -0400 (Thu, 29 Mar 2012) | 1 line
+
+ldr-utils: move O_BINARY to actual open() call to make tests happy
+------------------------------------------------------------------------
+r5820 | vapier | 2012-03-29 23:39:49 -0400 (Thu, 29 Mar 2012) | 1 line
+
+ldr-utils: fix set-but-unused variable warnings
+------------------------------------------------------------------------
+r5819 | vapier | 2012-03-29 23:06:57 -0400 (Thu, 29 Mar 2012) | 3 lines
+
+ldr-utils: restore local Makefiles
+
+seems like they were dropped by accident
+------------------------------------------------------------------------
+r5818 | shenders | 2012-03-29 05:30:44 -0400 (Thu, 29 Mar 2012) | 2 lines
+
+Merge BF60x support to trunk.
+
+------------------------------------------------------------------------
+r5766 | shenders | 2011-11-04 12:59:32 -0400 (Fri, 04 Nov 2011) | 2 lines
+
+darwin needs objc to build.
+
+------------------------------------------------------------------------
+r5692 | sonicz | 2011-09-20 05:09:59 -0400 (Tue, 20 Sep 2011) | 8 lines
+
+Fix bug[#6797] ldr-utils: Split bss section into ldr zero-fill blocks according to predefined size.
+
+BF53x and BF561 bootrom doesn't support load and fill ldr blocks that is larger than
+64k bytes. The max block size is defined in ldr utility. If bss section is larger than
+this size, split it into several zero-fill blocks.
+
+
+
+------------------------------------------------------------------------
+r5607 | vapier | 2011-07-02 03:04:48 -0400 (Sat, 02 Jul 2011) | 1 line
+
+ldr-utils: when opening tty devices, do so with O_NONBLOCK so previous settings dont possibly cause us to hang
+------------------------------------------------------------------------
+r5575 | vapier | 2011-06-27 16:04:26 -0400 (Mon, 27 Jun 2011) | 1 line
+
+ldr-utils: fix filename in header
+------------------------------------------------------------------------
+r5419 | shenders | 2011-05-16 06:41:59 -0400 (Mon, 16 May 2011) | 2 lines
+
+[#6439] ldr-utils: fix up style from previous commit.
+
+------------------------------------------------------------------------
+r5412 | shenders | 2011-05-11 06:27:13 -0400 (Wed, 11 May 2011) | 2 lines
+
+[#6439] ldr-utils: init tty timeout values appropriately.
+
+------------------------------------------------------------------------
+r5389 | vapier | 2011-04-13 21:48:17 -0400 (Wed, 13 Apr 2011) | 1 line
+
+ldr-utils: fix fwrite() size check -- it returns # elements, not # of bytes
+------------------------------------------------------------------------
+r5388 | vapier | 2011-04-13 21:13:09 -0400 (Wed, 13 Apr 2011) | 1 line
+
+ldr-utils: bf537: unify block flags setup so that the special first block includes proper port/hwait settings too
+------------------------------------------------------------------------
+r5387 | vapier | 2011-04-11 15:32:46 -0400 (Mon, 11 Apr 2011) | 1 line
+
+ldr-utils: clear errno when reading to avoid confusing error output with higher levels and short reads
+------------------------------------------------------------------------
+r5386 | vapier | 2011-04-11 15:27:43 -0400 (Mon, 11 Apr 2011) | 1 line
+
+ldr-utils: avoid useless close() on tty lock file to avoid confusing strace output
+------------------------------------------------------------------------
+r5077 | vapier | 2010-12-26 11:58:15 -0500 (Sun, 26 Dec 2010) | 1 line
+
+ldr-utils: constify misc structures
+------------------------------------------------------------------------
+r5076 | vapier | 2010-12-26 11:56:00 -0500 (Sun, 26 Dec 2010) | 1 line
+
+ldr-utils: use ARRAY_SIZE a bit more
+------------------------------------------------------------------------
+r5005 | vapier | 2010-11-15 17:07:39 -0500 (Mon, 15 Nov 2010) | 1 line
+
+ldr-utils: clean up SDP code a bit and get SDRAM booting working
+------------------------------------------------------------------------
+r4995 | vapier | 2010-10-14 17:33:54 -0400 (Thu, 14 Oct 2010) | 1 line
+
+ldr-utils: convert 32bit ints read by the blackfin to litle endian
+------------------------------------------------------------------------
+r4989 | vapier | 2010-10-10 02:27:08 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: rebuild autotools
+------------------------------------------------------------------------
+r4988 | vapier | 2010-10-10 02:23:09 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: tweak HACKING file to avoid useless future updates
+------------------------------------------------------------------------
+r4987 | vapier | 2010-10-10 02:20:15 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: check fwrite/fread return values to fix gcc warnings
+------------------------------------------------------------------------
+r4986 | vapier | 2010-10-10 02:19:41 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: fix up tests after new sdp code
+------------------------------------------------------------------------
+r4985 | vapier | 2010-10-10 02:06:08 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: fix indentation
+------------------------------------------------------------------------
+r4984 | vapier | 2010-10-10 02:05:43 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: initial sdp loading support
+------------------------------------------------------------------------
+r4983 | vapier | 2010-10-10 00:21:33 -0400 (Sun, 10 Oct 2010) | 1 line
+
+ldr-utils: mark load methods static/const
+------------------------------------------------------------------------
+r4982 | vapier | 2010-10-09 09:31:26 -0400 (Sat, 09 Oct 2010) | 1 line
+
+ldr-utils: refresh autotools
+------------------------------------------------------------------------
+r3936 | vapier | 2010-02-10 18:37:49 -0500 (Wed, 10 Feb 2010) | 1 line
+
+ldr-utils: support silent automake when generating windows icons
+------------------------------------------------------------------------
+r3857 | vapier | 2010-02-04 15:35:09 -0500 (Thu, 04 Feb 2010) | 1 line
+
+ldr-utils: import autotool generated headers needed by configure/make steps
+------------------------------------------------------------------------
+r3855 | vapier | 2010-02-03 17:52:12 -0500 (Wed, 03 Feb 2010) | 1 line
+
+ldr-utils: rebuild autotools
+------------------------------------------------------------------------
+r3854 | vapier | 2010-02-03 17:42:12 -0500 (Wed, 03 Feb 2010) | 1 line
+
+ldr-utils: enable support for quiet builds if automake-1.11+ is available
+------------------------------------------------------------------------
+r3853 | vapier | 2010-02-03 17:40:06 -0500 (Wed, 03 Feb 2010) | 1 line
+
+ldr-utils: add support for bf592
+------------------------------------------------------------------------
+r3844 | vapier | 2010-02-02 19:07:01 -0500 (Tue, 02 Feb 2010) | 1 line
+
+ldr-utils: bf50x: fix typo in comment
+------------------------------------------------------------------------
+r3778 | vapier | 2009-12-17 15:15:33 -0500 (Thu, 17 Dec 2009) | 1 line
+
+enable posix/alarm code for mingw64
+------------------------------------------------------------------------
+r3705 | vapier | 2009-11-10 21:38:54 -0500 (Tue, 10 Nov 2009) | 1 line
+
+ldr-utils: regenerate autotools
+------------------------------------------------------------------------
+r3704 | vapier | 2009-11-10 21:05:44 -0500 (Tue, 10 Nov 2009) | 1 line
+
+add BF50x and BF54xM proc usage testing
+------------------------------------------------------------------------
+r3703 | vapier | 2009-11-10 21:03:12 -0500 (Tue, 10 Nov 2009) | 1 line
+
+check fwrite() return value for gcc warnings
+------------------------------------------------------------------------
+r3702 | vapier | 2009-11-10 20:55:18 -0500 (Tue, 10 Nov 2009) | 1 line
+
+add bf50x lfd target
+------------------------------------------------------------------------
+r3701 | vapier | 2009-11-10 20:52:39 -0500 (Tue, 10 Nov 2009) | 1 line
+
+add BF54xM targets
+------------------------------------------------------------------------
+r3464 | vapier | 2009-06-26 02:04:38 -0400 (Fri, 26 Jun 2009) | 1 line
+
+ldr-utils: update gnulib/autotool code
+------------------------------------------------------------------------
+r3463 | vapier | 2009-06-26 01:55:32 -0400 (Fri, 26 Jun 2009) | 1 line
+
+ldr-utils: support running out of git or svn
+------------------------------------------------------------------------
+r3462 | vapier | 2009-06-26 01:51:38 -0400 (Fri, 26 Jun 2009) | 1 line
+
+ldr-utils: build with _GNU_SOURCE by default
+------------------------------------------------------------------------
+r3461 | vapier | 2009-06-26 01:50:43 -0400 (Fri, 26 Jun 2009) | 1 line
+
+ldr-utils: update gitignore to match autotool files
+------------------------------------------------------------------------
+r3459 | vapier | 2009-06-23 16:24:11 -0400 (Tue, 23 Jun 2009) | 1 line
+
+ldr-utils: update autotools
+------------------------------------------------------------------------
+r3413 | vapier | 2009-05-29 11:23:23 -0400 (Fri, 29 May 2009) | 1 line
+
+if the file is short, dump a message rather than a confusing "error: success"
+------------------------------------------------------------------------
+r3358 | vapier | 2009-04-30 12:54:40 -0400 (Thu, 30 Apr 2009) | 1 line
+
+respect pflags settings for all BF53x/BF56x targets as pointed out by Eduardo Tagle
+------------------------------------------------------------------------
+r3355 | vapier | 2009-04-29 18:16:04 -0400 (Wed, 29 Apr 2009) | 1 line
+
+dont dump a backtrace by default as most people dont get it ... have it show up with --debug
+------------------------------------------------------------------------
+r2975 | vapier | 2008-11-04 18:27:59 -0500 (Tue, 04 Nov 2008) | 1 line
+
+add .gitignore
+------------------------------------------------------------------------
+r2969 | vapier | 2008-10-29 01:26:18 -0400 (Wed, 29 Oct 2008) | 1 line
+
+add TODO for phdr issue
+------------------------------------------------------------------------
+r2968 | vapier | 2008-10-29 01:25:54 -0400 (Wed, 29 Oct 2008) | 1 line
+
+store ldr stat info so we can avoid trying to allocate gigs of memory when showing a broken/corrupt ldr
+------------------------------------------------------------------------
+r2967 | vapier | 2008-10-29 01:11:44 -0400 (Wed, 29 Oct 2008) | 1 line
+
+make sure we use unsigned char bytes for display
+------------------------------------------------------------------------
+r2952 | vapier | 2008-10-18 04:00:15 -0400 (Sat, 18 Oct 2008) | 1 line
+
+set default block size back to 0x8000 as bootroms tend to die with large blocks ...
+------------------------------------------------------------------------
+r2951 | vapier | 2008-10-17 01:15:28 -0400 (Fri, 17 Oct 2008) | 1 line
+
+do not blockify phdrs by default
+------------------------------------------------------------------------
+r2950 | vapier | 2008-10-17 01:15:21 -0400 (Fri, 17 Oct 2008) | 1 line
+
+do not blockify phdrs by default
+------------------------------------------------------------------------
+r2949 | vapier | 2008-10-17 01:06:38 -0400 (Fri, 17 Oct 2008) | 1 line
+
+allow jump blocks to be omitted
+------------------------------------------------------------------------
+r2944 | vapier | 2008-10-14 21:03:09 -0400 (Tue, 14 Oct 2008) | 1 line
+
+make sure argv0 is set to a sane value before main() runs
+------------------------------------------------------------------------
+r2943 | vapier | 2008-10-14 20:20:03 -0400 (Tue, 14 Oct 2008) | 1 line
+
+make sure invalid/partial targets get rejected
+------------------------------------------------------------------------
+r2942 | vapier | 2008-10-14 20:18:45 -0400 (Tue, 14 Oct 2008) | 1 line
+
+make sure the target lengths match so we dont do partial matches
+------------------------------------------------------------------------
+r2941 | vapier | 2008-10-14 19:37:48 -0400 (Tue, 14 Oct 2008) | 1 line
+
+make sure we abort on invalid targets that begin with a dash
+------------------------------------------------------------------------
+r2919 | vapier | 2008-10-05 19:58:41 -0400 (Sun, 05 Oct 2008) | 1 line
+
+rebuild autotools
+------------------------------------------------------------------------
+r2918 | vapier | 2008-10-05 17:49:51 -0400 (Sun, 05 Oct 2008) | 1 line
+
+add bf51x to usage list
+------------------------------------------------------------------------
+r2917 | vapier | 2008-10-05 17:49:39 -0400 (Sun, 05 Oct 2008) | 1 line
+
+add comment explaining test purpose
+------------------------------------------------------------------------
+r2909 | vapier | 2008-10-02 13:50:16 -0400 (Thu, 02 Oct 2008) | 1 line
+
+only check source file when opening an existing one ... not when creating one
+------------------------------------------------------------------------
+r2908 | vapier | 2008-10-02 01:51:50 -0400 (Thu, 02 Oct 2008) | 1 line
+
+add support for BF51x
+------------------------------------------------------------------------
+r2907 | vapier | 2008-10-02 01:51:00 -0400 (Thu, 02 Oct 2008) | 1 line
+
+tweak comment to match reality
+------------------------------------------------------------------------
+r2891 | vapier | 2008-09-23 12:34:18 -0400 (Tue, 23 Sep 2008) | 1 line
+
+fix errno setting -- kernel inverts value, not userspace
+------------------------------------------------------------------------
+r2890 | vapier | 2008-09-23 12:33:33 -0400 (Tue, 23 Sep 2008) | 1 line
+
+do not allow source ldr file to be a non-normal file by default in case people reverse arguments by accident (specify a device as LDR source instead of destination)
+------------------------------------------------------------------------
+r2850 | vapier | 2008-09-04 16:10:44 -0400 (Thu, 04 Sep 2008) | 1 line
+
+regenerate autotools
+------------------------------------------------------------------------
+r2849 | vapier | 2008-09-04 16:08:08 -0400 (Thu, 04 Sep 2008) | 1 line
+
+fixup formatting strings
+------------------------------------------------------------------------
+r2848 | vapier | 2008-09-04 16:07:42 -0400 (Thu, 04 Sep 2008) | 1 line
+
+add support for pulling in inttypes.h for formatting strings
+------------------------------------------------------------------------
+r2768 | vapier | 2008-07-15 05:38:37 -0400 (Tue, 15 Jul 2008) | 1 line
+
+make sure the iovec is sane when registering a handler
+------------------------------------------------------------------------
+r2767 | vapier | 2008-07-15 05:36:58 -0400 (Tue, 15 Jul 2008) | 1 line
+
+remove open() from iovec since no target implements it
+------------------------------------------------------------------------
+r2766 | vapier | 2008-07-15 05:36:01 -0400 (Tue, 15 Jul 2008) | 1 line
+
+introduce a xzalloc() helper func
+------------------------------------------------------------------------
+r2765 | vapier | 2008-07-15 05:34:56 -0400 (Tue, 15 Jul 2008) | 1 line
+
+fix icon generation when building out of tree
+------------------------------------------------------------------------
+r2405 | vapier | 2008-06-02 20:15:07 -0400 (Mon, 02 Jun 2008) | 1 line
+
+rebuild autotools
+------------------------------------------------------------------------
+r2404 | vapier | 2008-06-02 20:14:09 -0400 (Mon, 02 Jun 2008) | 1 line
+
+add windows icon support
+------------------------------------------------------------------------
+r2377 | vapier | 2008-05-22 18:32:44 -0400 (Thu, 22 May 2008) | 1 line
+
+automatically convert names to unc if opening them failed so windows users dont need to use full unc naming convention
+------------------------------------------------------------------------
+r2368 | vapier | 2008-05-15 18:43:08 -0400 (Thu, 15 May 2008) | 1 line
+
+rebuild autotools
+------------------------------------------------------------------------
+r2367 | vapier | 2008-05-15 18:41:54 -0400 (Thu, 15 May 2008) | 1 line
+
+abstract away the tty open step and implement termios replacement functions for windows so that we can load over the serial port
+------------------------------------------------------------------------
+r2366 | vapier | 2008-05-15 17:46:28 -0400 (Thu, 15 May 2008) | 1 line
+
+relocate termios functions out of lfd code so that replacements can easily be added
+------------------------------------------------------------------------
+r2328 | vapier | 2008-05-01 17:56:51 -0400 (Thu, 01 May 2008) | 1 line
+
+add a small file explaining this subdir
+------------------------------------------------------------------------
+r2327 | vapier | 2008-05-01 17:51:49 -0400 (Thu, 01 May 2008) | 1 line
+
+import a POSIX compliant printf() replacement from gnulib as some systems (like mingw) do not support the "z" printf modifier used heavily in the source which results in horribly useless output
+------------------------------------------------------------------------
+r2326 | vapier | 2008-05-01 17:13:33 -0400 (Thu, 01 May 2008) | 1 line
+
+start a source code set of tests
+------------------------------------------------------------------------
+r2325 | vapier | 2008-05-01 17:11:00 -0400 (Thu, 01 May 2008) | 1 line
+
+add binary flags to make windows not crap itself due to working with brain dead ascii mode by default
+------------------------------------------------------------------------
+r2324 | vapier | 2008-05-01 15:35:13 -0400 (Thu, 01 May 2008) | 1 line
+
+have local mmap() emulation return MAP_FAILED instead of NULL
+------------------------------------------------------------------------
+r2321 | vapier | 2008-04-30 21:41:16 -0400 (Wed, 30 Apr 2008) | 1 line
+
+accept "para" as a short boot name for "parallel" to make u-boot integration simpler, and fix up the ignore block for bf53x parallel ldr flashing so it works
+------------------------------------------------------------------------
+r2259 | vapier | 2008-04-16 00:54:22 -0400 (Wed, 16 Apr 2008) | 1 line
+
+add HACKING file to explain layout of things
+------------------------------------------------------------------------
+r2254 | vapier | 2008-04-15 00:48:14 -0400 (Tue, 15 Apr 2008) | 1 line
+
+update docs / autotool files
+------------------------------------------------------------------------
+r2253 | vapier | 2008-04-14 23:37:20 -0400 (Mon, 14 Apr 2008) | 1 line
+
+if the file given to fill a punched hole is not the same size as the hole, make sure we either fill the gap or abort
+------------------------------------------------------------------------
+r2252 | vapier | 2008-04-14 22:05:13 -0400 (Mon, 14 Apr 2008) | 1 line
+
+rename "private_data" member of lfd structure to "ldr" as this is what it is actually used for ... drop the unused close() method of the iovec structure in the process
+------------------------------------------------------------------------
+r2251 | vapier | 2008-04-14 21:35:41 -0400 (Mon, 14 Apr 2008) | 1 line
+
+add debug output during loading in case things go south
+------------------------------------------------------------------------
+r2250 | vapier | 2008-04-13 17:20:29 -0400 (Sun, 13 Apr 2008) | 1 line
+
+rebuild autotool code
+------------------------------------------------------------------------
+r2249 | vapier | 2008-04-13 17:18:11 -0400 (Sun, 13 Apr 2008) | 1 line
+
+fixup udp sending and add tests for loading over tcp/udp
+------------------------------------------------------------------------
+r2248 | vapier | 2008-04-13 16:04:30 -0400 (Sun, 13 Apr 2008) | 1 line
+
+make sure the network target actually includes a hostname
+------------------------------------------------------------------------
+r2247 | vapier | 2008-04-13 15:58:29 -0400 (Sun, 13 Apr 2008) | 1 line
+
+rebuild autotool code
+------------------------------------------------------------------------
+r2246 | vapier | 2008-04-13 15:58:17 -0400 (Sun, 13 Apr 2008) | 1 line
+
+dont use fdatasync() on network connections ... set TCP_NODELAY instead as we're interested in low latency, not high throughput
+------------------------------------------------------------------------
+r2245 | vapier | 2008-04-13 02:59:14 -0400 (Sun, 13 Apr 2008) | 1 line
+
+[#4027] add support for a --bmode flag and generate a fake ignore block for parallel/fifo bootmodes where the first byte is used to indicate the bitsize/dma
+------------------------------------------------------------------------
+r2244 | vapier | 2008-04-13 02:57:32 -0400 (Sun, 13 Apr 2008) | 1 line
+
+update tests with auto-detect changes
+------------------------------------------------------------------------
+r2243 | vapier | 2008-04-12 13:05:03 -0400 (Sat, 12 Apr 2008) | 1 line
+
+tweak auto detection format as it just confuses people
+------------------------------------------------------------------------
+r2242 | vapier | 2008-04-11 14:05:01 -0400 (Fri, 11 Apr 2008) | 1 line
+
+fix help output parsing for short char options
+------------------------------------------------------------------------
+r2230 | vapier | 2008-04-04 10:34:51 -0400 (Fri, 04 Apr 2008) | 1 line
+
+add a check to see if the target supports fork()
+------------------------------------------------------------------------
+r2206 | vapier | 2008-03-19 18:03:01 -0400 (Wed, 19 Mar 2008) | 1 line
+
+add a test for the BF53x and the resvect flags
+------------------------------------------------------------------------
+r2205 | vapier | 2008-03-19 18:02:32 -0400 (Wed, 19 Mar 2008) | 1 line
+
+add the 538/539 to the usage test
+------------------------------------------------------------------------
+r2204 | vapier | 2008-03-19 18:02:10 -0400 (Wed, 19 Mar 2008) | 1 line
+
+do case insensitive matching against target names so that BF### is the same as bf###
+------------------------------------------------------------------------
+r2189 | vapier | 2008-03-13 20:25:37 -0400 (Thu, 13 Mar 2008) | 1 line
+
+update TODO -- need to split filesystem logic with creation logic
+------------------------------------------------------------------------
+r2188 | vapier | 2008-03-13 17:52:02 -0400 (Thu, 13 Mar 2008) | 1 line
+
+announce the target of the jump block
+------------------------------------------------------------------------
+r2186 | vapier | 2008-03-13 04:05:43 -0400 (Thu, 13 Mar 2008) | 1 line
+
+newer loader manual says resvect flag gets set for BF538
+------------------------------------------------------------------------
+r2185 | vapier | 2008-03-13 04:02:29 -0400 (Thu, 13 Mar 2008) | 1 line
+
+the BF538/BF539 uses the same LDR format as the BF533
+------------------------------------------------------------------------
+r2184 | vapier | 2008-03-08 06:22:41 -0500 (Sat, 08 Mar 2008) | 1 line
+
+make sure we handle fill blocks and hole punching correctly
+------------------------------------------------------------------------
+r2183 | vapier | 2008-03-08 05:47:33 -0500 (Sat, 08 Mar 2008) | 1 line
+
+catch segv/ill signals and add a --debug option to auto launch gdb
+------------------------------------------------------------------------
+r2176 | vapier | 2008-02-18 21:43:00 -0500 (Mon, 18 Feb 2008) | 1 line
+
+like any standard tool, clobber the output by default
+------------------------------------------------------------------------
+r2169 | vapier | 2008-01-30 15:01:53 -0500 (Wed, 30 Jan 2008) | 1 line
+
+dont bother trying to silence warnings ... if your system sucks and lacks POSIX functions, then you get a warning while building
+------------------------------------------------------------------------
+r2161 | vapier | 2008-01-29 06:13:01 -0500 (Tue, 29 Jan 2008) | 1 line
+
+tweak the fdatasync()/usleep() stubs in case the functions get used in a statement as reported by Mark Noonchester on the forums
+------------------------------------------------------------------------
+r2151 | vapier | 2008-01-19 00:09:53 -0500 (Sat, 19 Jan 2008) | 1 line
+
+add an option to control hardware flow control and disable it by default as it can cause read/write hangs on ports that do not have crtrts hooked up
+------------------------------------------------------------------------
+r2150 | vapier | 2008-01-19 00:07:32 -0500 (Sat, 19 Jan 2008) | 1 line
+
+a few more things todo
+------------------------------------------------------------------------
+r2131 | vapier | 2008-01-09 17:20:08 -0500 (Wed, 09 Jan 2008) | 1 line
+
+add a test for final flag handling when the final block needs to be split
+------------------------------------------------------------------------
+r2130 | vapier | 2008-01-09 17:02:49 -0500 (Wed, 09 Jan 2008) | 1 line
+
+fix from Olaf W. J. Zerres so that if we are splitting the final block, we dont label each split block as final
+------------------------------------------------------------------------
+r2129 | vapier | 2008-01-09 16:52:24 -0500 (Wed, 09 Jan 2008) | 1 line
+
+clean /var/lock/LCK..nonexistent-output ahead of time so we dont worry about its output
+------------------------------------------------------------------------
+r2128 | vapier | 2008-01-09 16:12:47 -0500 (Wed, 09 Jan 2008) | 1 line
+
+do not stop parsing the LDR when the final flag is reached as an LDR with multiple DXEs will have the final flag set multiple times
+------------------------------------------------------------------------
+r2095 | vapier | 2008-01-03 19:21:47 -0500 (Thu, 03 Jan 2008) | 1 line
+
+add error checking to sync/close steps and restore sleep after final block in case the host system is buggy and doesnt properly flush the fd in the kernel upon application exit
+------------------------------------------------------------------------
+r2076 | vapier | 2007-12-19 19:44:00 -0500 (Wed, 19 Dec 2007) | 1 line
+
+add support for BF523/BF524/BF526
+------------------------------------------------------------------------
+r2070 | vapier | 2007-12-18 20:21:50 -0500 (Tue, 18 Dec 2007) | 1 line
+
+ignore errors from .depend generation
+------------------------------------------------------------------------
+r2032 | vapier | 2007-12-06 21:18:00 -0500 (Thu, 06 Dec 2007) | 1 line
+
+add support for loading LDRs via TCP/UDP/IP to remote systems
+------------------------------------------------------------------------
+r1905 | vapier | 2007-11-16 14:37:57 -0500 (Fri, 16 Nov 2007) | 1 line
+
+POSIX systems provide fseeko/ftello/mmap
+------------------------------------------------------------------------
+r1900 | vapier | 2007-11-14 18:09:36 -0500 (Wed, 14 Nov 2007) | 1 line
+
+add support for cross-compiling for windows targets via mingw
+------------------------------------------------------------------------
+r1879 | vapier | 2007-11-05 16:14:03 -0500 (Mon, 05 Nov 2007) | 1 line
+
+add BF547 to accepted list
+------------------------------------------------------------------------
+r1878 | vapier | 2007-11-04 12:17:38 -0500 (Sun, 04 Nov 2007) | 1 line
+
+dont store .depend in svn since conflicts come up easily
+------------------------------------------------------------------------
+r1876 | vapier | 2007-11-02 18:17:10 -0400 (Fri, 02 Nov 2007) | 1 line
+
+fixup tty code in general to use autotools
+------------------------------------------------------------------------
+r1875 | vapier | 2007-11-02 15:37:00 -0400 (Fri, 02 Nov 2007) | 1 line
+
+fixup elf.h detection on non-elf systems and use the autotools AC_C_BIGENDIAN check
+------------------------------------------------------------------------
+r1874 | vapier | 2007-11-02 15:07:39 -0400 (Fri, 02 Nov 2007) | 1 line
+
+fixup atconfig utilization
+------------------------------------------------------------------------
+r1873 | vapier | 2007-11-02 00:35:44 -0400 (Fri, 02 Nov 2007) | 1 line
+
+initial cut at optional autotoolization
+------------------------------------------------------------------------
+r1866 | vapier | 2007-10-17 22:18:19 -0400 (Wed, 17 Oct 2007) | 1 line
+
+add an option to use the VMAs rather than the LMAs when generating addresses
+------------------------------------------------------------------------
+r1865 | vapier | 2007-10-15 10:10:32 -0400 (Mon, 15 Oct 2007) | 1 line
+
+skip weak symbols
+------------------------------------------------------------------------
+r1864 | vapier | 2007-10-15 00:22:01 -0400 (Mon, 15 Oct 2007) | 1 line
+
+dont sleep on the very last block
+------------------------------------------------------------------------
+r1860 | vapier | 2007-10-11 13:29:59 -0400 (Thu, 11 Oct 2007) | 1 line
+
+disable backtraces during testing
+------------------------------------------------------------------------
+r1859 | vapier | 2007-10-11 13:25:11 -0400 (Thu, 11 Oct 2007) | 1 line
+
+add support for dumping a backtrace upon error
+------------------------------------------------------------------------
+r1858 | vapier | 2007-10-11 13:23:59 -0400 (Thu, 11 Oct 2007) | 1 line
+
+set delay during testing to 0
+------------------------------------------------------------------------
+r1856 | vapier | 2007-10-11 12:11:15 -0400 (Thu, 11 Oct 2007) | 1 line
+
+set uart boot to true for bf52x as reported by michael hennerich
+------------------------------------------------------------------------
+r1853 | vapier | 2007-10-10 19:06:59 -0400 (Wed, 10 Oct 2007) | 1 line
+
+allow people to specify a file to stick into the hole punched into the LDR
+------------------------------------------------------------------------
+r1852 | vapier | 2007-10-10 11:52:58 -0400 (Wed, 10 Oct 2007) | 1 line
+
+treat input values first as ints rather than hex
+------------------------------------------------------------------------
+r1851 | vapier | 2007-10-10 11:41:02 -0400 (Wed, 10 Oct 2007) | 1 line
+
+add a controllable inter-block delay of 1 second when loading over the UART since many of our boards dont have RTS actually wired up
+------------------------------------------------------------------------
+r1848 | vapier | 2007-10-09 13:27:45 -0400 (Tue, 09 Oct 2007) | 1 line
+
+fix incorrectly inverted force check on locked ttys
+------------------------------------------------------------------------
+r1844 | vapier | 2007-10-08 07:02:52 -0400 (Mon, 08 Oct 2007) | 1 line
+
+create a background thread to read possible input from the board and tweak the stdin handling so you can press any key rather than having to hit enter
+------------------------------------------------------------------------
+r1843 | vapier | 2007-10-04 16:10:42 -0400 (Thu, 04 Oct 2007) | 1 line
+
+add initial BF52x support
+------------------------------------------------------------------------
+r1839 | vapier | 2007-10-02 11:59:14 -0400 (Tue, 02 Oct 2007) | 1 line
+
+add a debug feature to poison uninitialized memory with bogus values rather than sliding by with the memory probably being 0
+------------------------------------------------------------------------
+r1838 | vapier | 2007-10-02 11:58:14 -0400 (Tue, 02 Oct 2007) | 1 line
+
+if the block lacks data (like a final block), make sure we set the block data to NULL
+------------------------------------------------------------------------
+r1837 | vapier | 2007-10-02 11:55:00 -0400 (Tue, 02 Oct 2007) | 1 line
+
+make sure we actually initialize the ldr header size field
+------------------------------------------------------------------------
+r1836 | vapier | 2007-10-02 10:11:33 -0400 (Tue, 02 Oct 2007) | 1 line
+
+drop bogus memcpy()
+------------------------------------------------------------------------
+r1770 | vapier | 2007-08-27 16:34:06 -0400 (Mon, 27 Aug 2007) | 1 line
+
+make sure input ELF objects dont contain undefined symbols
+------------------------------------------------------------------------
+r1769 | vapier | 2007-08-27 15:02:51 -0400 (Mon, 27 Aug 2007) | 1 line
+
+initial support for injecting arbitrary ignore blocks into the LDR image (so we can punch a hole for embedded environment in u-boot)
+------------------------------------------------------------------------
+r1767 | vapier | 2007-08-24 17:21:02 -0400 (Fri, 24 Aug 2007) | 1 line
+
+add a test suite for all target variants
+------------------------------------------------------------------------
+r1766 | vapier | 2007-08-24 17:20:38 -0400 (Fri, 24 Aug 2007) | 1 line
+
+make sure we allow silicon rev for aliased targets as well (in other words, we accepted BF537-0.3, but no BF536-0.3)
+------------------------------------------------------------------------
+r1765 | vapier | 2007-08-24 17:19:41 -0400 (Fri, 24 Aug 2007) | 1 line
+
+output unsigned values since that is what they are -- size_t
+------------------------------------------------------------------------
+r1764 | vapier | 2007-08-23 14:52:31 -0400 (Thu, 23 Aug 2007) | 1 line
+
+set default creation mode to 666 and let umask take off the bits we dont want
+------------------------------------------------------------------------
+r1759 | vapier | 2007-08-16 23:52:52 -0400 (Thu, 16 Aug 2007) | 1 line
+
+allow people to use same target form as gcc: <cpu>[-<silicon rev>]
+------------------------------------------------------------------------
+r1719 | vapier | 2007-08-02 00:00:21 -0400 (Thu, 02 Aug 2007) | 1 line
+
+document VDSP format of .processor and .attributes for later use
+------------------------------------------------------------------------
+r1707 | vapier | 2007-07-27 01:27:16 -0400 (Fri, 27 Jul 2007) | 1 line
+
+allow people to control the global LDR header settings for BF56x
+------------------------------------------------------------------------
+r1706 | vapier | 2007-07-27 01:25:27 -0400 (Fri, 27 Jul 2007) | 1 line
+
+update create output to match forced jump block we have in BF54x to workaround bootrom bug
+------------------------------------------------------------------------
+r1701 | vapier | 2007-07-24 22:31:00 -0400 (Tue, 24 Jul 2007) | 1 line
+
+fix typo ... we want start of init elf object, not the elf file
+------------------------------------------------------------------------
+r1700 | vapier | 2007-07-24 17:33:46 -0400 (Tue, 24 Jul 2007) | 1 line
+
+implement an --initcode option so people can keep init code sep from the final ELF executable
+------------------------------------------------------------------------
+r1685 | vapier | 2007-07-05 15:35:35 -0400 (Thu, 05 Jul 2007) | 1 line
+
+add a --prompt flag to the loading process to help with debugging
+------------------------------------------------------------------------
+r1684 | vapier | 2007-06-29 03:00:15 -0400 (Fri, 29 Jun 2007) | 1 line
+
+make sure we actually pass down the ELF entry to the target
+------------------------------------------------------------------------
+r1683 | vapier | 2007-06-29 02:58:13 -0400 (Fri, 29 Jun 2007) | 1 line
+
+move the jump block omit step to the target code and enable jump block generation for BF54x again to work around a defect in the 0.0 silicon bootrom
+------------------------------------------------------------------------
+r1680 | vapier | 2007-06-26 20:29:36 -0400 (Tue, 26 Jun 2007) | 1 line
+
+add check for init symbols in diff section
+------------------------------------------------------------------------
+r1679 | vapier | 2007-06-26 20:29:28 -0400 (Tue, 26 Jun 2007) | 1 line
+
+update to match 4 byte checks
+------------------------------------------------------------------------
+r1678 | vapier | 2007-06-26 20:20:26 -0400 (Tue, 26 Jun 2007) | 1 line
+
+do not have elf_lookup_symbol() assume all symbols are found in the .text section; use the symbol itself to figure out what section it is in
+------------------------------------------------------------------------
+r1676 | vapier | 2007-06-25 09:45:36 -0400 (Mon, 25 Jun 2007) | 1 line
+
+add some checks for the 4 byte alignment requirements of target address and block count
+------------------------------------------------------------------------
+r1669 | vapier | 2007-06-20 14:06:08 -0400 (Wed, 20 Jun 2007) | 1 line
+
+the BF54x does not need a jump block since the LDR format supports changing the load address the bootrom will jump to
+------------------------------------------------------------------------
+r1668 | vapier | 2007-06-20 14:05:03 -0400 (Wed, 20 Jun 2007) | 1 line
+
+make sure we set init L1 address properly according to RESVECT and BF53{1,2,8} parts
+------------------------------------------------------------------------
+r1667 | vapier | 2007-06-15 14:43:50 -0400 (Fri, 15 Jun 2007) | 1 line
+
+respect elf load address for BF548 and add test cases for loading LDRs
+------------------------------------------------------------------------
+r1663 | vapier | 2007-06-15 00:17:12 -0400 (Fri, 15 Jun 2007) | 1 line
+
+fixup misc issues running on a big endian host
+------------------------------------------------------------------------
+r1651 | vapier | 2007-06-12 17:11:41 -0400 (Tue, 12 Jun 2007) | 1 line
+
+overhaul ldr-utils and generalize backends so we can drop in support for new processors more easily
+------------------------------------------------------------------------
+r1619 | vapier | 2007-05-11 13:34:40 -0400 (Fri, 11 May 2007) | 1 line
+
+allow people to control the load address and block size rather than forcing 0x1000 / 0x8000 like we always have in the past
+------------------------------------------------------------------------
+r1575 | vapier | 2007-04-11 06:23:02 -0400 (Wed, 11 Apr 2007) | 1 line
+
+[#2894] if possible, use the elf.h from the local uClibc so we can compile on random hosts ... if local uClibc is not available, then solution is to install Linux
+------------------------------------------------------------------------
+r1574 | vapier | 2007-04-11 05:46:51 -0400 (Wed, 11 Apr 2007) | 1 line
+
+rename elf.{c,h} to ldr_elf.{c,h} so we can use "elf.h" to refer to the system elf header
+------------------------------------------------------------------------
+r1504 | vapier | 2007-03-07 16:43:34 -0500 (Wed, 07 Mar 2007) | 1 line
+
+allow people to specify the baud rate while loading
+------------------------------------------------------------------------
+r1503 | vapier | 2007-03-07 15:56:57 -0500 (Wed, 07 Mar 2007) | 1 line
+
+tidy up a bit
+------------------------------------------------------------------------
+r1476 | vapier | 2007-02-28 18:49:23 -0500 (Wed, 28 Feb 2007) | 1 line
+
+[#2804] add support for tty locks
+------------------------------------------------------------------------
+r1475 | vapier | 2007-02-28 18:11:24 -0500 (Wed, 28 Feb 2007) | 1 line
+
+[#2804] make sure we dont always exit with 0; pass back the sum of the return statuses in case of failures
+------------------------------------------------------------------------
+r1474 | vapier | 2007-02-28 18:10:31 -0500 (Wed, 28 Feb 2007) | 1 line
+
+[#2804] add some timeouts to ldr_send
+------------------------------------------------------------------------
+r1346 | vapier | 2007-01-21 14:23:45 -0500 (Sun, 21 Jan 2007) | 1 line
+
+make sure we can read ldrs properly on big endian hosts
+------------------------------------------------------------------------
+r1320 | vapier | 2007-01-12 00:14:29 -0500 (Fri, 12 Jan 2007) | 1 line
+
+make sure ldr creation works with fullpaths to elfs
+------------------------------------------------------------------------
+r1319 | vapier | 2007-01-11 23:51:12 -0500 (Thu, 11 Jan 2007) | 1 line
+
+rename
+------------------------------------------------------------------------
+r1304 | vapier | 2006-12-25 17:23:42 -0500 (Mon, 25 Dec 2006) | 1 line
+
+[#2510] dxe_sdram_init.h no longer exists
+------------------------------------------------------------------------
+r1303 | vapier | 2006-12-22 05:47:14 -0500 (Fri, 22 Dec 2006) | 2 lines
+
+[#2510] add some more comments
+
+------------------------------------------------------------------------
+r1302 | vapier | 2006-12-22 05:39:19 -0500 (Fri, 22 Dec 2006) | 2 lines
+
+[#2510] scrub previous init code and add support for converting ELFs directly
+
+------------------------------------------------------------------------
+r1301 | vapier | 2006-12-16 19:01:31 -0500 (Sat, 16 Dec 2006) | 2 lines
+
+[#2474] make sure we set up the tty parameters before attempting to use it for booting via UART
+
+------------------------------------------------------------------------
+r1300 | vapier | 2006-12-16 18:32:46 -0500 (Sat, 16 Dec 2006) | 2 lines
+
+[#1767] have the autobaud read to temp failure retries to handle some ttys that interrupt before the complete autobaud can be read
+
+------------------------------------------------------------------------
+r1295 | vapier | 2006-12-07 00:08:36 -0500 (Thu, 07 Dec 2006) | 2 lines
+
+should rename this project
+
+------------------------------------------------------------------------
+r1294 | vapier | 2006-12-05 20:09:36 -0500 (Tue, 05 Dec 2006) | 2 lines
+
+only pull in endian.h on linux and sys/endian.h on freebsd
+
+------------------------------------------------------------------------
+r1244 | vapier | 2006-10-19 16:35:48 -0400 (Thu, 19 Oct 2006) | 2 lines
+
+output the whole autobaud to help with diagnosing misbehavior
+
+------------------------------------------------------------------------
+r1215 | vapier | 2006-09-26 13:25:29 -0400 (Tue, 26 Sep 2006) | 2 lines
+
+make sure the compiler supports the -W flag (to support ancient compilers like gcc-2 and gcc-3.3)
+
+------------------------------------------------------------------------
+r1205 | vapier | 2006-09-21 21:44:59 -0400 (Thu, 21 Sep 2006) | 2 lines
+
+import initial pass at creating LDR files
+
+------------------------------------------------------------------------
+r1203 | vapier | 2006-09-21 16:22:16 -0400 (Thu, 21 Sep 2006) | 2 lines
+
+add a little more info about LDRs/DXEs/blocks
+
+------------------------------------------------------------------------
+r1196 | vapier | 2006-09-15 18:35:52 -0400 (Fri, 15 Sep 2006) | 2 lines
+
+note where BF537 flags are documented
+
+------------------------------------------------------------------------
+r1095 | vapier | 2006-08-03 14:12:18 -0400 (Thu, 03 Aug 2006) | 2 lines
+
+small project for handling LDR files
+
+------------------------------------------------------------------------

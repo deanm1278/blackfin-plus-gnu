@@ -1,0 +1,99 @@
+AT_SETUP(load)
+
+AT_LDR_CHECK(LDR_BINARY -T BF531 --load LDRS_DIR/uart.ldr /dev/null, [1], [dnl
+Loading LDR ldrs/uart.ldr ... OK!
+], [dnl
+ldr: target 'BF531' does not support booting via UART
+])
+
+AT_LDR_CHECK([
+dnl this should probably be $(localstatedir) ...
+test -e /var/lock/LCK..nonexistent-output && rm -f /var/lock/LCK..nonexistent-output
+LDR_BINARY -T BF536 -l LDRS_DIR/uart.ldr nonexistent-output
+], [1], [dnl
+Loading LDR ldrs/uart.ldr ... OK!
+Opening nonexistent-output ...], [dnl
+Failed: No such file or directory
+])
+
+AT_LDR_CHECK([
+LDR_UART_LOADER LDR_BINARY --load --delay 0 LDRS_DIR/uart.ldr
+cmp LDRS_DIR/uart.ldr load.ldr
+LDR_UART_LOADER LDR_BINARY --load --delay 0 LDRS_DIR/bf548.ldr
+cmp LDRS_DIR/bf548.ldr load.ldr
+], [0], [dnl
+Loading LDR ldrs/uart.ldr ... OK!
+Opening #4 ... OK!
+Configuring terminal I/O ... OK!
+Trying to send autobaud ... OK!
+Trying to read autobaud ... OK!
+Checking autobaud ... OK!
+Autobaud result: 115200bps 0.0mhz (header:0xBF DLL:0x00 DLH:0x00 fin:0x00)
+Sending blocks of DXE 1 ... [[1/8] (12%)           [2/8] (25%)           [3/8] (38%)           [4/8] (50%)           [5/8] (62%)           [6/8] (75%)           [7/8] (88%)           [8/8] (100%)            OK!]
+You may want to run minicom or kermit now
+Quick tip: run 'ldr <ldr> <devspec> && minicom'
+Loading LDR ldrs/bf548.ldr ... OK!
+Opening #4 ... OK!
+Configuring terminal I/O ... OK!
+Trying to send autobaud ... OK!
+Trying to read autobaud ... OK!
+Checking autobaud ... OK!
+Autobaud result: 115200bps 0.0mhz (header:0xBF DLL:0x00 DLH:0x00 fin:0x00)
+Sending blocks of DXE 1 ... [[1/30] ( 3%)            [2/30] ( 7%)            [3/30] (10%)            [4/30] (13%)            [5/30] (17%)            [6/30] (20%)            [7/30] (23%)            [8/30] (27%)            [9/30] (30%)            [10/30] (33%)             [11/30] (37%)             [12/30] (40%)             [13/30] (43%)             [14/30] (47%)             [15/30] (50%)             [16/30] (53%)             [17/30] (57%)             [18/30] (60%)             [19/30] (63%)             [20/30] (67%)             [21/30] (70%)             [22/30] (73%)             [23/30] (77%)             [24/30] (80%)             [25/30] (83%)             [26/30] (87%)             [27/30] (90%)             [28/30] (93%)             [29/30] (97%)             [30/30] (100%)              OK!]
+You may want to run minicom or kermit now
+Quick tip: run 'ldr <ldr> <devspec> && minicom'
+])
+
+AT_LDR_CHECK([
+LDR_UART_LOADER --tcp LDR_BINARY --load --delay 0 LDRS_DIR/uart.ldr
+cmp LDRS_DIR/uart.ldr load.ldr
+LDR_UART_LOADER --tcp LDR_BINARY --load --delay 0 LDRS_DIR/bf548.ldr
+cmp LDRS_DIR/bf548.ldr load.ldr
+], [0], [dnl
+Loading LDR ldrs/uart.ldr ... OK!
+Connecting to remote target 'localhost' on port '55192' ... OK!
+Trying to send autobaud ... OK!
+Trying to read autobaud ... OK!
+Checking autobaud ... OK!
+Autobaud result: 0bps 0.0mhz (header:0xBF DLL:0x00 DLH:0x00 fin:0x00)
+Sending blocks of DXE 1 ... [[1/8] (12%)           [2/8] (25%)           [3/8] (38%)           [4/8] (50%)           [5/8] (62%)           [6/8] (75%)           [7/8] (88%)           [8/8] (100%)            OK!]
+You may want to run minicom or kermit now
+Quick tip: run 'ldr <ldr> <devspec> && minicom'
+Loading LDR ldrs/bf548.ldr ... OK!
+Connecting to remote target 'localhost' on port '55192' ... OK!
+Trying to send autobaud ... OK!
+Trying to read autobaud ... OK!
+Checking autobaud ... OK!
+Autobaud result: 0bps 0.0mhz (header:0xBF DLL:0x00 DLH:0x00 fin:0x00)
+Sending blocks of DXE 1 ... [[1/30] ( 3%)            [2/30] ( 7%)            [3/30] (10%)            [4/30] (13%)            [5/30] (17%)            [6/30] (20%)            [7/30] (23%)            [8/30] (27%)            [9/30] (30%)            [10/30] (33%)             [11/30] (37%)             [12/30] (40%)             [13/30] (43%)             [14/30] (47%)             [15/30] (50%)             [16/30] (53%)             [17/30] (57%)             [18/30] (60%)             [19/30] (63%)             [20/30] (67%)             [21/30] (70%)             [22/30] (73%)             [23/30] (77%)             [24/30] (80%)             [25/30] (83%)             [26/30] (87%)             [27/30] (90%)             [28/30] (93%)             [29/30] (97%)             [30/30] (100%)              OK!]
+You may want to run minicom or kermit now
+Quick tip: run 'ldr <ldr> <devspec> && minicom'
+])
+
+AT_LDR_CHECK([
+LDR_UART_LOADER --udp LDR_BINARY --load --delay 0 LDRS_DIR/uart.ldr
+cmp LDRS_DIR/uart.ldr load.ldr
+LDR_UART_LOADER --udp LDR_BINARY --load --delay 0 LDRS_DIR/bf548.ldr
+cmp LDRS_DIR/bf548.ldr load.ldr
+], [0], [dnl
+Loading LDR ldrs/uart.ldr ... OK!
+Connecting to remote target 'localhost' on port '55192' ... OK!
+Trying to send autobaud ... OK!
+Trying to read autobaud ... OK!
+Checking autobaud ... OK!
+Autobaud result: 0bps 0.0mhz (header:0xBF DLL:0x00 DLH:0x00 fin:0x00)
+Sending blocks of DXE 1 ... [[1/8] (12%)           [2/8] (25%)           [3/8] (38%)           [4/8] (50%)           [5/8] (62%)           [6/8] (75%)           [7/8] (88%)           [8/8] (100%)            OK!]
+You may want to run minicom or kermit now
+Quick tip: run 'ldr <ldr> <devspec> && minicom'
+Loading LDR ldrs/bf548.ldr ... OK!
+Connecting to remote target 'localhost' on port '55192' ... OK!
+Trying to send autobaud ... OK!
+Trying to read autobaud ... OK!
+Checking autobaud ... OK!
+Autobaud result: 0bps 0.0mhz (header:0xBF DLL:0x00 DLH:0x00 fin:0x00)
+Sending blocks of DXE 1 ... [[1/30] ( 3%)            [2/30] ( 7%)            [3/30] (10%)            [4/30] (13%)            [5/30] (17%)            [6/30] (20%)            [7/30] (23%)            [8/30] (27%)            [9/30] (30%)            [10/30] (33%)             [11/30] (37%)             [12/30] (40%)             [13/30] (43%)             [14/30] (47%)             [15/30] (50%)             [16/30] (53%)             [17/30] (57%)             [18/30] (60%)             [19/30] (63%)             [20/30] (67%)             [21/30] (70%)             [22/30] (73%)             [23/30] (77%)             [24/30] (80%)             [25/30] (83%)             [26/30] (87%)             [27/30] (90%)             [28/30] (93%)             [29/30] (97%)             [30/30] (100%)              OK!]
+You may want to run minicom or kermit now
+Quick tip: run 'ldr <ldr> <devspec> && minicom'
+])
+
+AT_CLEANUP

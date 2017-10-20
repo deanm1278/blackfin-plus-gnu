@@ -1,0 +1,11 @@
+assert
+fseeko
+ftello
+func
+fprintf-posix
+inline
+printf-posix
+snprintf-posix
+sprintf-posix
+stdbool
+strsignal

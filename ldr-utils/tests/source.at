@@ -1,0 +1,7 @@
+AT_SETUP(source)
+
+dnl make sure we open things in "binary" mode for stupid windows
+AT_CHECK([[grep '\<open.*O_' $abs_srcdir/../*.[ch] | grep -v O_BINARY]],[ignore])
+AT_CHECK([[grep -E '\<fd?open' $abs_srcdir/../*.[ch] | grep -v '"[arw]b']],[ignore])
+
+AT_CLEANUP
