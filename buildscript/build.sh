@@ -68,7 +68,7 @@ build_gcc()
 	run_cmd $MAKE
 
 	echo "installing gcc..."
-	run_cmd $MAKE install
+	run_cmd make install
 }
 
 build_ldr_utils()

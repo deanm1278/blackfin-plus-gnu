@@ -1,3 +1,8 @@
+bfin-elf/*
+binutils_build/*
+gcc_build/*
+staging_build/*
+
 *.diff
 *.patch
 *.orig
