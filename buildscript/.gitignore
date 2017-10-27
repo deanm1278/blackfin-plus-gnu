@@ -1,4 +1,5 @@
 bfin-elf/*
+bfin-elf-win/*
 binutils_build/*
 gcc_build/*
 staging_build/*

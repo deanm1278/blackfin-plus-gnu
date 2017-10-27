@@ -181,16 +181,17 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__ldr_SOURCES_DIST = helpers.c ldr.c ldr_elf.c lfd.c lfd_bf506.c \
 	lfd_bf518.c lfd_bf527.c lfd_bf533.c lfd_bf537.c lfd_bf548.c \
-	lfd_bf561.c lfd_bf592.c lfd_bf609.c termios-mingw.c \
-	arg-nonnull.h blackfin_defines.h c++defs.h dxe_jump.h dxes.h \
-	headers.h helpers.h ldr.h ldr_elf.h lfd.h link-warning.h sdp.h \
-	warn-on-use.h icon.rc
+	lfd_bf561.c lfd_bf592.c lfd_bf609.c lfd_bf706.c \
+	termios-mingw.c arg-nonnull.h blackfin_defines.h c++defs.h \
+	dxe_jump.h dxes.h headers.h helpers.h ldr.h ldr_elf.h lfd.h \
+	link-warning.h sdp.h warn-on-use.h icon.rc
 @USE_RC_SOURCES_TRUE@am__objects_1 = icon.$(OBJEXT)
 am_ldr_OBJECTS = helpers.$(OBJEXT) ldr.$(OBJEXT) ldr_elf.$(OBJEXT) \
 	lfd.$(OBJEXT) lfd_bf506.$(OBJEXT) lfd_bf518.$(OBJEXT) \
 	lfd_bf527.$(OBJEXT) lfd_bf533.$(OBJEXT) lfd_bf537.$(OBJEXT) \
 	lfd_bf548.$(OBJEXT) lfd_bf561.$(OBJEXT) lfd_bf592.$(OBJEXT) \
-	lfd_bf609.$(OBJEXT) termios-mingw.$(OBJEXT) $(am__objects_1)
+	lfd_bf609.$(OBJEXT) lfd_bf706.$(OBJEXT) \
+	termios-mingw.$(OBJEXT) $(am__objects_1)
 ldr_OBJECTS = $(am_ldr_OBJECTS)
 am__DEPENDENCIES_1 =
 ldr_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -1206,7 +1207,7 @@ ACLOCAL_AMFLAGS = -I gnulib/m4
 AM_CPPFLAGS = -DLOCALSTATEDIR=\"$(localstatedir)\"
 @USE_RC_SOURCES_FALSE@RC_SOURCES = 
 @USE_RC_SOURCES_TRUE@RC_SOURCES = icon.rc
-ldr_SOURCES = helpers.c ldr.c ldr_elf.c lfd.c lfd_bf506.c lfd_bf518.c lfd_bf527.c lfd_bf533.c lfd_bf537.c lfd_bf548.c lfd_bf561.c lfd_bf592.c lfd_bf609.c termios-mingw.c arg-nonnull.h blackfin_defines.h c++defs.h dxe_jump.h dxes.h headers.h helpers.h ldr.h ldr_elf.h lfd.h link-warning.h sdp.h warn-on-use.h $(RC_SOURCES)
+ldr_SOURCES = helpers.c ldr.c ldr_elf.c lfd.c lfd_bf506.c lfd_bf518.c lfd_bf527.c lfd_bf533.c lfd_bf537.c lfd_bf548.c lfd_bf561.c lfd_bf592.c lfd_bf609.c lfd_bf706.c termios-mingw.c arg-nonnull.h blackfin_defines.h c++defs.h dxe_jump.h dxes.h headers.h helpers.h ldr.h ldr_elf.h lfd.h link-warning.h sdp.h warn-on-use.h $(RC_SOURCES)
 ldr_LDADD = $(LIB_PTHREAD)
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -1327,6 +1328,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lfd_bf561.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lfd_bf592.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lfd_bf609.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lfd_bf706.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/termios-mingw.Po@am__quote@
 
 .c.o:

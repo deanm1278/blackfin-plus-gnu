@@ -11,7 +11,7 @@ DIR_LDR_UTILS_SOURCE=$(pwd)"/../ldr-utils"
 MAKE="make -j10"
 
 CBUILD= # the system we are compiling on
-CHOST=  # the system the final compiler will run on
+CHOST= # the system the final compiler will run on
 
 CBUILD=$($DIR_APP/config.guess)
 BUILD_TARGET="--build=${CBUILD}"

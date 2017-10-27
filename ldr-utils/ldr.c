@@ -108,7 +108,7 @@ static struct option_help const create_opts_help[] = {
 	{"(BF53x) Desired boot mode",           "<mode>"},
 	{"(BF53x) PORT for HWAIT signal",       "<F|G|H>"},
 	{"(BF53x) GPIO for HWAIT signal",       "<#>"},
-	{"(BF54x) DMA flag",                    "<#>"},
+	{"(BF54x) DMA flag (or bcode for bf70x)", "<#>"},
 	{"(BF56x) Flash bits (8bit)",           "<bits>"},
 	{"(BF56x) Wait states (15)",            "<num>"},
 	{"(BF56x) Flash Hold time cycles (3)",  "<num>"},

@@ -116,6 +116,7 @@ bool lfd_open(LFD *alfd, const char *filename)
 	 *  - BF53x -> "0xFF"
 	 *  - BF561 -> "0xA0"
 	 *  - BF54x -> "0xAD"
+	 *  - BF70x -> "0xAD"
 	 */
 	if (!alfd->target && !filename) {
 		err("please select a target with -T <target>");

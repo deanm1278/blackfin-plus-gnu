@@ -3,6 +3,7 @@
  * running on single core Blackfin processors.
  *
  * Copyright (C) 2008 Analog Devices, Inc.
+ * Modified 2017 Dean Miller
  *
  * The authors hereby grant permission to use, copy, modify, distribute,
  * and license this software and its documentation for any purpose, provided

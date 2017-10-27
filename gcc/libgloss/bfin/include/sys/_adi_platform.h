@@ -117,21 +117,21 @@
 #elif defined (__ADSPBF609__)
 #include <cdefBF609.h>
 #elif defined (__ADSPBF700__)
-#include <cdefBF700.h>
+#
 #elif defined (__ADSPBF701__)
-#include <cdefBF701.h>
+#
 #elif defined (__ADSPBF702__)
-#include <cdefBF702.h>
+#
 #elif defined (__ADSPBF703__)
-#include <cdefBF703.h>
+#
 #elif defined (__ADSPBF704__)
-#include <cdefBF704.h>
+#
 #elif defined (__ADSPBF705__)
-#include <cdefBF705.h>
+#
 #elif defined (__ADSPBF706__)
-#include <cdefBF706.h>
+#
 #elif defined (__ADSPBF707__)
-#include <cdefBF707.h>
+#
 #else
 #error Processor Type Not Supported
 #endif
@@ -236,21 +236,21 @@
 #elif defined (__ADSPBF609__)
 #include <defBF609.h>
 #elif defined (__ADSPBF700__)
-#include <defBF700.h>
+#
 #elif defined (__ADSPBF701__)
-#include <defBF701.h>
+#
 #elif defined (__ADSPBF702__)
-#include <defBF702.h>
+#
 #elif defined (__ADSPBF703__)
-#include <defBF703.h>
+#
 #elif defined (__ADSPBF704__)
-#include <defBF704.h>
+#
 #elif defined (__ADSPBF705__)
-#include <defBF705.h>
+#
 #elif defined (__ADSPBF706__)
-#include <defBF706.h>
+#
 #elif defined (__ADSPBF707__)
-#include <defBF707.h>
+#
 #else
 #error Processor Type Not Supported
 #endif
