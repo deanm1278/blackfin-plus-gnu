@@ -25,9 +25,10 @@
 // - calls _exit (which calls monexit to dump accumulated prof data (PROFCRT))
 // - defines dummy IO routines (!FIOCRT)
 
-#include <def_LPBlackfin.h>
+//#include <bf706_device.h>
 #include <sys/anomaly_macros_rtl.h>
 
+#define EVT0 0x1FC02000
 #define IVBh (EVT0 >> 16)
 #define IVBl (EVT0 & 0xFFFF)
 #define UNASSIGNED_VAL 0
@@ -35,11 +36,26 @@
 // just IVG15
 #define INTERRUPT_BITS 0x400
 
+#define REG_RCU0_SVECT0 0x20000020
+
+#define REG_RCU0_SVECT0h (REG_RCU0_SVECT0 >> 16)
+#define REG_RCU0_SVECT0l (REG_RCU0_SVECT0 & 0xFFFF)
+
 	.text;
 	.align 2;
 	.global __start;
 	.type __start, STT_FUNC;
 __start:
+
+	CSYNC;
+
+	// Set RCU0_SVECT0 to allow a self-initiated core only reset to bypass
+	// the boot code and vector straight to the beginning of L1 memory.
+	R0.L = __start;
+	R0.H = __start;
+	P2.L = REG_RCU0_SVECT0l;
+	P2.H = REG_RCU0_SVECT0h;
+	[P2] = R0;
 
 	// Zap loop counters to zero, to make sure that
 	// hw loops are disabled - it could be really baffling
@@ -55,21 +71,6 @@ __start:
 	L1 = R7;
 	L2 = R7;
 	L3 = R7;
-
-	// Zero ITEST_COMMAND and DTEST_COMMAND
-	// (in case they have crud in them and
-	// does a write somewhere when we enable cache)
-	I0.L = (ITEST_COMMAND & 0xFFFF);
-	I0.H = (ITEST_COMMAND >> 16);
-	I1.L = (DTEST_COMMAND & 0xFFFF);
-	I1.H = (DTEST_COMMAND >> 16);
-	R7 = 0;
-	[I0] = R7;
-	[I1] = R7;
-	// It seems writing ITEST_COMMAND from SDRAM with icache enabled
-	// needs SSYNC.
-	
-	CSYNC;
 
 	// Initialise the Event Vector table.
 	P0.H = IVBh;

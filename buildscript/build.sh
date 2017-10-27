@@ -88,16 +88,16 @@ build_ldr_utils()
 
 
 #execution
-check_prereqs_verbose ${PREREQ_FILE}
+#check_prereqs_verbose ${PREREQ_FILE}
 
-mkdir binutils_build
-mkdir gcc_build
-mkdir $DIR_ELF_OUTPUT
+#mkdir binutils_build
+#mkdir gcc_build
+#mkdir $DIR_ELF_OUTPUT
 
 #build elf toolchain
 
-build_binutils elf $DIR_ELF_OUTPUT
-build_gcc elf $DIR_ELF_OUTPUT
+#build_binutils elf $DIR_ELF_OUTPUT
+#build_gcc elf $DIR_ELF_OUTPUT
 
 export STAGEDIR=${DIR_BUILD}/staging_build
 mk_output_dir "staging" "${STAGEDIR}"
