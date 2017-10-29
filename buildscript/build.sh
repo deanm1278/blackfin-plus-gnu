@@ -58,7 +58,7 @@ build_gcc()
 
 	run_cmd "${DIR_GCC_SOURCE}"/configure $BUILD_TARGET $HOST_TARGET --prefix=${prefix} --target=${target} \
 		--disable-libstdcxx-pch \
-		--enable-languages=c \
+		--enable-languages=c,c++ \
 		--enable-clocale=generic \
 		--disable-werror --with-newlib \
 		--disable-symvers --disable-libssp --disable-libffi --disable-libgcj \
@@ -90,14 +90,14 @@ build_ldr_utils()
 #execution
 #check_prereqs_verbose ${PREREQ_FILE}
 
-#mkdir binutils_build
-#mkdir gcc_build
-#mkdir $DIR_ELF_OUTPUT
+mkdir binutils_build
+mkdir gcc_build
+mkdir $DIR_ELF_OUTPUT
 
 #build elf toolchain
 
-#build_binutils elf $DIR_ELF_OUTPUT
-#build_gcc elf $DIR_ELF_OUTPUT
+build_binutils elf $DIR_ELF_OUTPUT
+build_gcc elf $DIR_ELF_OUTPUT
 
 export STAGEDIR=${DIR_BUILD}/staging_build
 mk_output_dir "staging" "${STAGEDIR}"
