@@ -70,7 +70,7 @@ build_autotooled_pkg()
 		ised "${f}" -e "/^prefix=/s:=.*:=${STAGEDIR}/usr:"
 	done
 
-	clean_build_dir "${build}"
+	#clean_build_dir "${build}"
 
 	resume_save
 

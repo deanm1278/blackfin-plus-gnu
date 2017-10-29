@@ -28,34 +28,21 @@
 //#include <bf706_device.h>
 #include <sys/anomaly_macros_rtl.h>
 
-#define EVT0 0x1FC02000
-#define IVBh (EVT0 >> 16)
-#define IVBl (EVT0 & 0xFFFF)
+#define EVT2h (0x1FC02008 >> 16)
+#define EVT2l (0x1FC02008 & 0xFFFF)
 #define UNASSIGNED_VAL 0
 #define UNASSIGNED_FILL 0
 // just IVG15
-#define INTERRUPT_BITS 0x400
-
-#define REG_RCU0_SVECT0 0x20000020
-
-#define REG_RCU0_SVECT0h (REG_RCU0_SVECT0 >> 16)
-#define REG_RCU0_SVECT0l (REG_RCU0_SVECT0 & 0xFFFF)
+#define INTERRUPT_BITS 0x8800
 
 	.text;
 	.align 2;
 	.global __start;
 	.type __start, STT_FUNC;
+	.section .text.prologue, "ax"
 __start:
 
 	CSYNC;
-
-	// Set RCU0_SVECT0 to allow a self-initiated core only reset to bypass
-	// the boot code and vector straight to the beginning of L1 memory.
-	R0.L = __start;
-	R0.H = __start;
-	P2.L = REG_RCU0_SVECT0l;
-	P2.H = REG_RCU0_SVECT0h;
-	[P2] = R0;
 
 	// Zap loop counters to zero, to make sure that
 	// hw loops are disabled - it could be really baffling
@@ -73,12 +60,11 @@ __start:
 	L3 = R7;
 
 	// Initialise the Event Vector table.
-	P0.H = IVBh;
-	P0.L = IVBl;
+	P0.H = EVT2h;
+	P0.L = EVT2l;
 
 	// Install __unknown_exception_occurred in EVT so that
 	// there is defined behaviour.
-	P0 += 2*4;		// Skip Emulation and Reset
 	P1 = 13;
 	R1.L = __unknown_exception_occurred;
 	R1.H = __unknown_exception_occurred;
@@ -119,15 +105,13 @@ L$ivt:	[P0++] = R1;
 	R1 = 0;
 	CALL.X _memset;
 
-	R0 = INTERRUPT_BITS;
-	R0 <<= 5;	// Bits 0-4 not settable.
+	R0 = INTERRUPT_BITS (Z);
 	// CALL.X __install_default_handlers;
 	R4 = R0;		// Save modified list
 
 	R0 = SYSCFG;		// Enable the Cycle counter
 	BITSET(R0,1);
 	SYSCFG = R0;
-
 
 	// Reinitialise data areas in RAM from ROM, if MemInits
 	// been used.

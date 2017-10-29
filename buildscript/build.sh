@@ -3,7 +3,7 @@
 #check prereqs
 
 PREREQ_FILE="autoconf automake awk /bin/sh bison cp echo flex gcc gettext grep ln m4 make makeinfo mkdir msgfmt mv rm sed tail wc which pkg-config"
-DIR_ELF_OUTPUT=$(pwd)"/bfin-elf"
+DIR_ELF_OUTPUT=$(pwd)"/bfin-elf-win"
 DIR_BUILD=$(pwd)
 DIR_BINUTILS_SOURCE=$(pwd)"/../binutils-gdb"
 DIR_GCC_SOURCE=$(pwd)"/../gcc"

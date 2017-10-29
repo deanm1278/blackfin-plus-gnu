@@ -40,7 +40,7 @@ typedef struct {
 #define BFLAG_HDRCHK_MASK       0x00FF0000
 #define BFLAG_HDRCHK_SHIFT      16
 
-static const struct lfd_flag bf548_lfd_flags[] = {
+static const struct lfd_flag bf70x_lfd_flags[] = {
 	{ BFLAG_SAFE,        "safe"      },
 	{ BFLAG_AUX,         "aux"       },
 	{ BFLAG_FILL,        "fill"      },
@@ -157,9 +157,9 @@ bool bf70x_lfd_display_dxe(LFD *alfd, size_t d)
 			case 15: printf("128bit-dma-from-128bit "); break;
 		}
 
-		for (i = 0; bf548_lfd_flags[i].desc; ++i)
-			if (block_code & bf548_lfd_flags[i].flag)
-				printf("%s ", bf548_lfd_flags[i].desc);
+		for (i = 0; bf70x_lfd_flags[i].desc; ++i)
+			if (block_code & bf70x_lfd_flags[i].flag)
+				printf("%s ", bf70x_lfd_flags[i].desc);
 
 		printf(")\n");
 	}
@@ -173,7 +173,7 @@ bool bf70x_lfd_display_dxe(LFD *alfd, size_t d)
  * XXX: no way for user to set "argument" or block_code fields ...
  */
 #define LDR_ADDR_INIT 0x11A00000
-static bool _bf548_lfd_write_header(FILE *fp, uint32_t block_code, uint32_t addr,
+static bool _bf70x_lfd_write_header(FILE *fp, uint32_t block_code, uint32_t addr,
                                     uint32_t count, uint32_t argument)
 {
 	uint8_t header[LDR_BLOCK_HEADER_LEN];
@@ -218,22 +218,12 @@ bool bf70x_lfd_write_block(struct lfd *alfd, uint8_t dxe_flags,
 
 	block_code = block_code_base;
 
-	if ((dxe_flags & DXE_BLOCK_FIRST) && family_is(alfd, "BF548")) {
+	if ((dxe_flags & DXE_BLOCK_FIRST) && family_is(alfd, "BF706")) {
 		block_code |= BFLAG_IGNORE | BFLAG_FIRST;
 		addr = LDR_ADDR_INIT;
 	}
 	if (dxe_flags & DXE_BLOCK_INIT) {
 		block_code |= BFLAG_INIT;
-		addr = LDR_ADDR_INIT;
-	}
-	if (dxe_flags & DXE_BLOCK_JUMP) {
-		/* normally we can use the LDR header to control
-		 * the start address, but the 0.0 bootrom has a
-		 * bug in it when booting out of external memory,
-		 * so we have to force the jump block for now.
-		 */
-		if (addr == LDR_ADDR_INIT)
-			return true;
 		addr = LDR_ADDR_INIT;
 	}
 	if (dxe_flags & DXE_BLOCK_FILL) {
@@ -271,7 +261,7 @@ bool bf70x_lfd_write_block(struct lfd *alfd, uint8_t dxe_flags,
 			} else if (src) {
 				/* squeeze out a little of this block first */
 				uint32_t split_count = ssplit_count;
-				ret &= _bf548_lfd_write_header(fp, block_code, addr, split_count, argument);
+				ret &= _bf70x_lfd_write_header(fp, block_code, addr, split_count, argument);
 				ret &= (fwrite(src, 1, split_count, fp) == split_count ? true : false);
 				src += split_count;
 				addr += split_count;
@@ -280,7 +270,7 @@ bool bf70x_lfd_write_block(struct lfd *alfd, uint8_t dxe_flags,
 				err("Punching holes with fill blocks?");
 
 			/* finally write out hole */
-			ret &= _bf548_lfd_write_header(fp, block_code | BFLAG_IGNORE, 0, hole_count, 0xBAADF00D);
+			ret &= _bf70x_lfd_write_header(fp, block_code | BFLAG_IGNORE, 0, hole_count, 0xBAADF00D);
 			if (opts->hole.filler_file) {
 				FILE *filler_fp = fopen(opts->hole.filler_file, "rb");
 				if (filler_fp) {
@@ -304,7 +294,7 @@ bool bf70x_lfd_write_block(struct lfd *alfd, uint8_t dxe_flags,
 		}
 	}
 
-	ret &= _bf548_lfd_write_header(fp, block_code, addr, count, argument);
+	ret &= _bf70x_lfd_write_header(fp, block_code, addr, count, argument);
 	if (src)
 		ret &= (fwrite(src, 1, count, fp) == count ? true : false);
 	if (count % 4) /* skip a few trailing bytes */
@@ -317,7 +307,7 @@ bool bf70x_lfd_write_block(struct lfd *alfd, uint8_t dxe_flags,
 		addr = LDR_ADDR_INIT;
 		count = 0;
 		argument = 0;
-		ret &= _bf548_lfd_write_header(fp, block_code, addr, count, argument);
+		ret &= _bf70x_lfd_write_header(fp, block_code, addr, count, argument);
 
 		/* we need to set the argument in the first block header to point here */
 		curr_pos = ftell(fp);
@@ -328,7 +318,7 @@ bool bf70x_lfd_write_block(struct lfd *alfd, uint8_t dxe_flags,
 		ldr_make_little_endian_32(addr);
 		rewind(fp);
 		block_code = block_code_base | BFLAG_IGNORE | BFLAG_FIRST;
-		ret &= _bf548_lfd_write_header(fp, block_code, addr, count, argument);
+		ret &= _bf70x_lfd_write_header(fp, block_code, addr, count, argument);
 		fseek(fp, 0, SEEK_END);
 	}
 
@@ -360,7 +350,7 @@ uint32_t bf70x_lfd_dump_block(BLOCK *block, FILE *fp, bool dump_fill)
 }
 
 static const char * const bf706_aliases[] = { "BF700", "BF701", "BF702", "BF703", "BF704", "BF705", "BF706", "BF707", NULL };
-static const struct lfd_target bf706_lfd_target = {
+static const struct lfd_target bf70x_lfd_target = {
 	.name = "BF706",
 	.description = "Blackfin LDR handler for BF700/BF701/BF702/BF703/BF704/BF705/BF706/BF707.",
 	.aliases = bf706_aliases,
@@ -374,7 +364,7 @@ static const struct lfd_target bf706_lfd_target = {
 };
 
 __attribute__((constructor))
-static void bf706_lfd_target_register(void)
+static void bf70x_lfd_target_register(void)
 {
-	lfd_target_register(&bf706_lfd_target);
+	lfd_target_register(&bf70x_lfd_target);
 }
