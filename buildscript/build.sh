@@ -8,6 +8,9 @@ DIR_BUILD=$(pwd)
 DIR_BINUTILS_SOURCE=$(pwd)"/../binutils-gdb"
 DIR_GCC_SOURCE=$(pwd)"/../gcc"
 DIR_LDR_UTILS_SOURCE=$(pwd)"/../ldr-utils"
+DIR_GDBPROXY_SOURCE=$(pwd)"/../bfin-gdbproxy"
+DIR_URJTAG_SOURCE=$(pwd)"/../urjtag"
+DIR_OPENOCD_SOURCE=$(pwd)"/../openocd/openocd"
 MAKE="make -j10"
 
 CBUILD= # the system we are compiling on
@@ -86,24 +89,66 @@ build_ldr_utils()
 	done
 }
 
+#  $1 - configure --prefix=XXX
+build_openocd()
+{
+	local prefix="$1"
+
+	change_clean_dir openocd_build
+	echo "configuring openocd..."
+	run_cmd "${DIR_OPENOCD_SOURCE}"/configure --prefix=${prefix} --disable-werror
+	echo "building openocd..."
+	run_cmd $MAKE LDFLAGS="-L/usr/local/lib"
+	echo "installing openocd..."
+	run_cmd make install
+}
+
+#  $1 - configure --prefix=XXX
+build_gdbproxy()
+{
+	local prefix="$1"
+	#change_clean_dir urjtag_build
+	echo "configuring urjtag..."
+	#run_cmd "${DIR_URJTAG_SOURCE}"/configure --enable-bsdl=no --enable-python=no
+	echo "building urjtag..."
+	#run_cmd $MAKE
+	echo "installing urjtag..."
+	#run_cmd make install
+
+	change_clean_dir gdbproxy_build
+	echo "configuring gdbproxy..."
+	run_cmd "${DIR_GDBPROXY_SOURCE}"/configure --prefix=${prefix}
+	echo "building gdbproxy..."
+	run_cmd $MAKE LDFLAGS="-L/usr/local/lib"
+	echo "installing gdbproxy..."
+	run_cmd make install
+}
+
 
 #execution
 #check_prereqs_verbose ${PREREQ_FILE}
 
-mkdir binutils_build
-mkdir gcc_build
-mkdir $DIR_ELF_OUTPUT
+#mkdir binutils_build
+#mkdir gcc_build
+#mkdir $DIR_ELF_OUTPUT
 
 #build elf toolchain
 
-build_binutils elf $DIR_ELF_OUTPUT
-build_gcc elf $DIR_ELF_OUTPUT
+#build_binutils elf $DIR_ELF_OUTPUT
+#build_gcc elf $DIR_ELF_OUTPUT
 
-export STAGEDIR=${DIR_BUILD}/staging_build
-mk_output_dir "staging" "${STAGEDIR}"
+#export STAGEDIR=${DIR_BUILD}/staging_build
+#mk_output_dir "staging" "${STAGEDIR}"
+#mkdir $STAGEDIR/
 
-export PKG_CONFIG_PATH="${STAGEDIR}/usr/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 : ${PKG_CONFIG:=pkg-config --static}
 export PKG_CONFIG
 
-build_ldr_utils
+#build_ldr_utils
+
+mkdir openocd_build
+build_openocd $DIR_ELF_OUTPUT
+
+#mkdir gdbproxy_build
+#build_gdbproxy $DIR_ELF_OUTPUT

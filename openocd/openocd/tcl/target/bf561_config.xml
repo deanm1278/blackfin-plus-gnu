@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!DOCTYPE blackfin-config SYSTEM "openocd_blackfin_config.dtd">
+<blackfin-config>
+    <processor name="bf561">
+        <config name="mdma_d0" value="0xffc01800" />
+        <config name="mdma_s0" value="0xffc01840" />
+    </processor>
+</blackfin-config>

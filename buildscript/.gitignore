@@ -2,6 +2,9 @@ bfin-elf/*
 bfin-elf-win/*
 binutils_build/*
 gcc_build/*
+gdbproxy_build/*
+urjtag_build/*
+openocd_build/*
 staging_build/*
 
 *.diff

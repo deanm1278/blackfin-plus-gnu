@@ -24,7 +24,7 @@ MEMORY
   MEM_L1_DATA_A : ORIGIN = 0x11800000, LENGTH = 0x8000
   MEM_L1_DATA_B : ORIGIN = 0x11900000, LENGTH = 0x8000
 
-  MEM_L2 : ORIGIN = 0x08000000, LENGTH = 0x100000
+  MEM_L2 : ORIGIN = 0x08002000, LENGTH = 0x0F0000
 }
 
 /* The default linker script, for single core blackfin standalone executables */

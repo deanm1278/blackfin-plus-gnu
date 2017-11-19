@@ -1,0 +1,819 @@
+#!/bin/sh
+#Build Script - Rohit Makasana ( rohit.makasana@rrap-software.com )
+#             - Modified by Bernd Schmidt (   )
+#             - Modified by Robin Getz (rgetz@blackfin.uclinux.org)
+#             - Modified by Jie Zhang (jie.zhang@analog.com)
+#
+#             - parts of this borrowed from the build-uclinux-tools.sh
+#               written by David McCullough, Heiko Degenhardt,
+#               Berndardo Innocenti, and Steve Miller
+#
+# This file is not an official part of GCC.
+#
+# This is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# This is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GCC; see the file COPYING.  If not, write to
+# the Free Software Foundation, 59 Temple Place - Suite 330,
+# Boston, MA 02111-1307, USA.
+#
+###############################################################
+
+. "${0%/*}/lib/lib.sh" || exit 1
+
+START=$(date +%s)
+
+#Uncomment only one of these
+#TIMESTAMP=`date +%Y-%b-%d-%H-%M` # is YYYY_MMM_DD_HH_MM
+TIMESTAMP=`date +%Y%m%d`       # is YYYY_MMM_DD
+unset DATE_STAMP VERBOSE WARN
+
+#On freshly installed Debian 8.1, this command should be enough
+# apt-get install autoconf automake gcc make gettext pkg-config libtool realpath
+PREREQ_FILE="autoconf automake awk /bin/sh cp echo gcc gettext grep ln m4 make makeinfo mkdir msgfmt mv rm sed tail wc which pkg-config libtoolize realpath"
+NUM_JOBS=0
+CLEAN_BUILD_DIRS=true
+RESUME_BUILD=false
+CBUILD= # the system we are compiling on
+CHOST=  # the system the final compiler will run on
+
+PACKAGE_VERSION="Analog Devices CCES 2.7.0"
+
+# All the packages we build up
+PKGS_DEFAULT="openocd qemu"
+PKGS_ALL="${PKGS_DEFAULT} readline expat libusb hidapi libftdi urjtag gdbproxy zlib libffi gettext libiconv glib pixman dtc"
+PKGS_ALIASES="
+	urjtag:jtag
+"
+unset PKGS_SKIP PKGS_BUILD
+
+pkgs_alias()
+{
+	local p u="$1"
+
+	if has ${u} ${PKGS_ALL} ; then
+		echo ${u}
+		return 0
+	fi
+
+	for p in ${PKGS_ALIASES} ; do
+		if has ${u} `IFS=:; set -- ${p#*:}; echo $*` ; then
+			echo ${p%%:*}
+			return 0
+		fi
+	done
+
+	return 1
+}
+
+usage() {
+# We don't document the -S option - it's for advanced users who know what
+# they are doing.  For maximum reproducibility, not using it is better.
+cat <<-EOF
+Usage : $APP_NAME [OPTIONS]
+-b BUILD         Build directory (leave blank to use current dir)
+-h               Help
+-H HOST          Build toolchain to run on HOST.
+-j NUM           Pass -j NUM to make (default is 2x num of CPUs)
+-m MAKE          Default make (leave blank to use system make)
+-O OUTPUT        Output directory (leave blank to use build dir)
+-p               Check prerequisites
+-P STRING        Use STRING as the package version
+-R               Don't remove build directories when finished compiling
+-s SOURCE        Toolchain Source directory
+-v               Verbose
+-w               Warnings to be sent to a different log file
+EOF
+exit ${1:-0}
+}
+
+while getopts b:H:hj:m:O:pP:Rs:S:vw parameter
+do
+	case $parameter in
+		b)  DIR_BUILD=${OPTARG%/} ;;
+		h)  usage ;;
+		j)  NUM_JOBS=$OPTARG ;;
+		m)  MAKE=$OPTARG ;;
+		p)  CHECK_PRE=true ;;
+		s)  DIR_SOURCE=${OPTARG%/} ;;
+		v)  VERBOSE=1 ;;
+		w)  WARN=1 ;;
+		H)  CHOST=$OPTARG ;;
+		O)  DIR_OUTPUT=$OPTARG ;;
+		P)  PKGVERSION=$OPTARG ;;
+		R)  CLEAN_BUILD_DIRS=false ;;
+		S)
+			if ! pkg=`pkgs_alias ${OPTARG}` ; then
+				error "unknown package given to -S: ${OPTARG}"
+			fi
+			PKGS_SKIP="${PKGS_SKIP} ${pkg}"
+			;;
+		*)  error "unknown option $parameter\n" \
+		          "Try \`$APP_NAME -h' for more information."
+			;;
+	esac
+done
+
+pkgs_queue()
+{
+	local p pkg
+	for pkg in "$@" ; do
+		if ! p=`pkgs_alias ${pkg}` ; then
+			error "unknown package: ${pkg}"
+		fi
+		has ${p} ${PKGS_SKIP} && continue
+		has ${p} ${PKGS_BUILD} && continue
+		PKGS_BUILD="${PKGS_BUILD} ${p}"
+	done
+}
+pkgs_queued()
+{
+	local p
+	for p in "$@" ; do
+		p=`pkgs_alias ${p}`
+		has ${p} ${PKGS_BUILD} || return 1
+	done
+	return 0
+}
+pkgs_queued_any()
+{
+	local p
+	for p in "$@" ; do
+		pkgs_queued ${p} && return 0
+	done
+	return 1
+}
+pkgs_unqueue()
+{
+	local p
+	for p in "$@" ; do
+		p=`pkgs_alias ${p}`
+		PKGS_BUILD=$(echo $(echo ${PKGS_BUILD} | sed s:${p}::))
+	done
+}
+
+shift $((OPTIND - 1))
+[ $# -eq 0 ] && set -- ${PKGS_DEFAULT}
+pkgs_queue "$@"
+
+# Make sure root does not build things
+if [ "$(id -u)" -eq 0 ]; then
+	echo "you should not build the toolchain as the 'root' user"
+	sleep 30
+fi
+
+############ Check and error if I can't find the things I need #
+
+check_cc_options() {
+	if `${1} ${2} -S -o /dev/null -xc /dev/null > /dev/null 2>&1` ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+: ${MAKE:=make}
+if [ -n "$CHECK_PRE" ] ; then
+	check_prereqs_verbose ${PREREQ_FILE}
+	exit 0
+else
+	check_prereqs_short ${PREREQ_FILE} ${MAKE}
+fi
+
+############ Done checking - lets get on to building ###################3
+
+############ CHECK MAKE SET #####################################
+if [ "$NUM_JOBS" = "0" ] ; then
+	NUM_JOBS=`grep -sc "^processor" /proc/cpuinfo`
+	: $(( NUM_JOBS *= 2 ))
+	[ ${NUM_JOBS} -eq 0 ] && NUM_JOBS=2
+fi
+export MAKEFLAGS="-j$NUM_JOBS $MAKEFLAGS"
+notice "Utilizing make" "$MAKE $MAKEFLAGS"
+
+############ ABSOLUTE PATH TO SOURCE DIRECTORIES ################
+
+ABS_DIR_SOURCE=`realpath ${DIR_SOURCE}`
+check_abs_dir "Toolchain source" "${ABS_DIR_SOURCE}"
+
+: ${DIR_BUILD:=${PWD}}
+
+mkdir -p "${DIR_BUILD}"
+check_abs_dir "" "${DIR_BUILD}"
+
+export STAGEDIR=${DIR_BUILD}/staging_build
+mk_output_dir "staging" "${STAGEDIR}"
+
+DIR_LOG=$DIR_BUILD/logs
+mk_output_dir "logs" "${DIR_LOG}"
+${RESUME_BUILD} || resume_clear
+
+# make sure we arent running on a case insensitive filesystem
+cd "${DIR_BUILD}"
+check_fs_case
+
+CBUILD=$($DIR_APP/config.guess)
+BUILD_TARGET="--build=${CBUILD}"
+: ${CHOST:=${CBUILD}}
+HOST_TARGET="--host=${CHOST}"
+
+if pkgs_queued gdbproxy ; then
+	pkgs_queue urjtag
+	check_src_pkg gdbproxy
+fi
+if pkgs_queued urjtag ; then
+	pkgs_queue readline libusb libftdi
+	check_src_pkg urjtag
+fi
+if pkgs_queued openocd ; then
+	pkgs_queue hidapi libftdi expat
+	check_src_pkg openocd
+fi
+if pkgs_queued hidapi ; then
+	pkgs_queue libusb
+	check_src_pkg hidapi
+fi
+if pkgs_queued libftdi ; then
+	pkgs_queue libusb
+	check_src_pkg libftdi-1.0 LIBFTDI
+fi
+if pkgs_queued qemu ; then
+	pkgs_queue expat glib pixman dtc
+	check_src_pkg qemu 
+fi
+if pkgs_queued glib ; then
+	pkgs_queue zlib libffi gettext
+	check_src_pkg glib
+fi
+if pkgs_queued gettext ; then
+	pkgs_queue libiconv
+	check_src_pkg gettext
+fi
+pkgs_queued libusb && check_src_pkg libusb
+pkgs_queued readline && check_src_pkg readline
+pkgs_queued expat && check_src_pkg expat
+pkgs_queued zlib && check_src_pkg zlib
+pkgs_queued libffi && check_src_pkg libffi
+pkgs_queued libiconv && check_src_pkg libiconv
+pkgs_queued pixman && check_src_pkg pixman
+pkgs_queued dtc && check_src_pkg dtc
+
+###################### set up log file ###########################
+
+STDOUT_LOG="$DIR_LOG/log${DATE_STAMP+.${TIMESTAMP}}"
+STDERR_LOG="$DIR_LOG/warn${DATE_STAMP+.${TIMESTAMP}}"
+notice "Creating log file" "${STDOUT_LOG}"
+if [ $VERBOSE ]; then
+	LOGFILE="| tee -a ${STDOUT_LOG}"
+	ACTUAL_LOGFILE=${STDOUT_LOG}
+else
+	if [ $WARN ] ; then
+		echo "*** Warnings going to $DIR_LOG/warn"
+		LOGFILE=">> ${STDOUT_LOG} 2>> ${STDERR_LOG}"
+		ACTUAL_LOGFILE=${STDERR_LOG}
+	else
+		LOGFILE=">> ${STDOUT_LOG} 2>&1"
+		ACTUAL_LOGFILE=${STDOUT_LOG}
+	fi
+fi
+
+#################################################################
+############## DONOT CHANGE ANYTHING BELOW THIS LINE ############
+#################################################################
+
+build_curses()
+{
+	# help out mingw targets; some packages (like gdb) need curses
+	if [ "${CBUILD}" = "${CHOST}" ] || check_lib curses ${CHOST} 2>/dev/null ; then
+		return 0
+	fi
+
+	PN="pdcurses"
+	S=$(echo $DIR_READLINE_SOURCE/../PDCurses-*)
+	WORKDIR=$DIR_BUILD/${PN}_build
+
+	[ -d "${S}" ] || return 0
+
+	PV=$(awk '{v=$NF} END{print v}' "${S}"/version.mif)
+
+	echo_date "${PN}: building (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd $MAKE -f "${S}"/win32/gccwin32.mak PDCURSES_SRCDIR="${S}" \
+		CC=${CHOST}-gcc LIBEXE=${CHOST}-ar libs
+
+	echo_date "${PN}: installing"
+	run_cmd cp *curses.a "${STAGEDIR}"/usr/lib/libcurses.a
+	run_cmd cp "${S}"/curses.h "${STAGEDIR}"/usr/include/
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_readline()
+{
+	pkgs_queued readline || return 0
+	
+	# help out mingw targets; some packages (like urjtag) like readline
+	if [ "${CBUILD}" = "${CHOST}" ] || check_lib readline ${CHOST} 2>/dev/null ; then
+		if echo $CBUILD | grep -qiv darwin ; then
+			return 0
+		fi
+	fi
+
+	PN="readline"
+	S="$DIR_READLINE_SOURCE"
+	WORKDIR=$DIR_BUILD/${PN}_build
+
+	[ -d "${S}" ] || return 0
+
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET \
+		--disable-shared --prefix=/usr
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_expat()
+{
+	pkgs_queued expat || return 0
+
+	# help out mingw targets; some packages (like gdb) like expat
+	if check_lib expat ${CHOST} 2>/dev/null ; then
+		return 0
+	fi
+	PN="expat"
+	S=$DIR_EXPAT_SOURCE
+	WORKDIR=$DIR_BUILD/${PN}_build
+
+	[ -d "${S}" ] || return 0
+
+	PV=$("${S}"/conftools/get-version.sh "${S}"/lib/expat.h)
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET \
+		--target=${target} --disable-shared --prefix=/usr
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE buildlib
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE installlib DESTDIR="${STAGEDIR}"
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libexpat.la
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_libusb()
+{
+	pkgs_queued libusb || return 0
+
+	build_autotooled_pkg "${DIR_LIBUSB_SOURCE}" \
+		--disable-shared --enable-static --disable-udev
+}
+
+build_hidapi()
+{
+	pkgs_queued hidapi || return 0
+
+	change_dir "${DIR_HIDAPI_SOURCE}"
+	run_cmd ./bootstrap
+
+	build_autotooled_pkg "${DIR_HIDAPI_SOURCE}" \
+		--disable-shared --enable-static
+}
+
+build_libftdi()
+{
+	pkgs_queued libftdi || return 0
+
+	at_make_args() { echo SUBDIRS=src; }
+	build_autotooled_pkg "${DIR_LIBFTDI_SOURCE}" \
+		--disable-shared --enable-static --disable-libftdipp \
+		--disable-python-binding --with-async-mode
+}
+
+build_urjtag()
+{
+	pkgs_queued urjtag || return 0
+
+	at_clean() {
+		# generated files get out of sync with source files; force regen
+		run_cmd rm -f src/bsdl/bsdl_bison.[ch] src/bsdl/bsdl_flex.c \
+			src/svf/svf_bison.[ch] src/svf/svf_flex.c
+	}
+	at_install_post() {
+		# let the local jtag find its data files while debugging
+		if [ ! -L src/apps/share/urjtag ] ; then
+			mkdir -p src/apps/share
+			ln -s ../../../../../urjtag/data src/apps/share/urjtag
+		fi
+	}
+
+	if echo $CBUILD | grep -qi darwin ; then
+		at_make_args() { echo "LDFLAGS='-framework IOKit -framework CoreFoundation -lreadline -lncurses'"; }
+	fi
+
+	change_dir "${DIR_URJTAG_SOURCE}"
+	run_cmd autoreconf -i -v -f
+	build_autotooled_pkg "${DIR_URJTAG_SOURCE}" \
+		--enable-bsdl --enable-svf --enable-stapl \
+		--disable-shared --enable-static --enable-relocatable \
+		--with-libusb=1.0 --disable-python
+}
+
+build_gdbproxy()
+{
+	pkgs_queued gdbproxy || return 0
+	
+	if echo $CBUILD | grep -qi darwin ; then
+		at_make_args() { echo "LDFLAGS='-lreadline -lncurses'"; }
+	fi
+
+	build_autotooled_pkg "${DIR_GDBPROXY_SOURCE}"
+}
+
+build_openocd()
+{
+	pkgs_queued openocd || return 0
+
+	change_dir "${DIR_OPENOCD_SOURCE}"
+	run_cmd ./bootstrap nosubmodule
+
+	PV=`"${DIR_OPENOCD_SOURCE}"/configure --version | head -n1 | awk '{print $NF}'`
+	RELSTR=`"${DIR_OPENOCD_SOURCE}"/guess-rev.sh "${DIR_OPENOCD_SOURCE}"`
+
+	build_autotooled_pkg "${DIR_OPENOCD_SOURCE}" \
+		--with-pkgversion="${PACKAGE_VERSION} OpenOCD ${PV}${RELSTR}" \
+		--with-bugurl="processor.tools.support@analog.com" \
+		--disable-ftdi --disable-stlink --disable-ti-icdi --disable-ulink \
+		--disable-usb-blaster-2 --disable-vsllink --enable-jlink \
+		--disable-vsllink --disable-osbdm --disable-opendous --disable-aice \
+		--disable-usbprog --disable-rlink --disable-armjtagew \
+		--enable-cmsis-dap \
+		--enable-maintainer-mode \
+		--with-libexpat-prefix="${STAGEDIR}"/usr
+}
+
+build_zlib()
+{
+	pkgs_queued zlib || return 0
+
+	PN="zlib"
+	S=$DIR_ZLIB_SOURCE
+	WORKDIR=$DIR_BUILD/${PN}_build
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET --prefix=/usr --disable-shared
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE all
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/zlib.pc
+	run_cmd cp "${S}"/zlib.h "${S}"/zconf.h "${STAGEDIR}"/usr/include/
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_libffi()
+{
+	pkgs_queued libffi || return 0
+
+	PN="libffi"
+	S=$DIR_LIBFFI_SOURCE
+	WORKDIR=$DIR_BUILD/${PN}_build
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET --disable-shared --prefix=/usr
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE all
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/libffi.pc
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libffi.la
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_gettext()
+{
+	pkgs_queued gettext || return 0
+
+	PN="gettext"
+	S=$DIR_GETTEXT_SOURCE/gettext-runtime
+	WORKDIR=$DIR_BUILD/${PN}_build
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	if [ "${CBUILD}" != "${CHOST}" ] ; then
+		THREADS_API=windows
+	else
+		THREADS_API=posix
+	fi
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET --prefix=/usr --disable-shared --enable-threads=${THREADS_API}
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE all
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libasprintf.la
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libintl.la
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_libiconv()
+{
+	pkgs_queued libiconv || return 0
+
+	PN="libiconv"
+	S=$DIR_LIBICONV_SOURCE
+	WORKDIR=$DIR_BUILD/${PN}_build
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET --prefix=/usr --disable-shared
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE all
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libcharset.la
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libiconv.la
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_glib()
+{
+	pkgs_queued glib || return 0
+
+	PN="glib"
+	S=$DIR_GLIB_SOURCE
+	WORKDIR=$DIR_BUILD/${PN}_build
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET \
+		--prefix=/usr \
+		--disable-shared \
+		--with-pcre=internal \
+		--disable-maintainer-mode
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE V=1 all
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/gio-*.pc
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/glib-2.0.pc
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/gmodule-2.0.pc
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/gmodule-export-2.0.pc
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/gmodule-no-export-2.0.pc
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/gobject-2.0.pc
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/gthread-2.0.pc
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libgio-2.0.la
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libgmodule-2.0.la
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libgthread-2.0.la
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libglib-2.0.la
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libgobject-2.0.la
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_pixman()
+{
+	pkgs_queued pixman || return 0
+
+	PN="pixman"
+	S=$DIR_PIXMAN_SOURCE
+	WORKDIR=$DIR_BUILD/${PN}_build
+	PV=`"${S}"/configure --version | head -n1 | awk '{print $NF}'`
+
+	echo_date "${PN}: configuring (${PV})"
+	change_clean_dir "${WORKDIR}"
+	! is_abs_dir "${S}" && S=../${S}
+	run_cmd "${S}"/configure $BUILD_TARGET $HOST_TARGET --prefix=/usr --disable-shared
+
+	echo_date "${PN}: building"
+	run_cmd $MAKE V=1 all
+
+	echo_date "${PN}: installing"
+	run_cmd $MAKE install DESTDIR="${STAGEDIR}"
+	run_cmd sed -i -- 's|^prefix=.*$|prefix='${STAGEDIR}'/usr|' ${STAGEDIR}/usr/lib/pkgconfig/pixman-1.pc
+	run_cmd rm -f "${STAGEDIR}"/usr/lib/libpixman-1.la
+
+	clean_build_dir "${WORKDIR}"
+}
+
+build_dtc()
+{
+	pkgs_queued dtc || return 0
+
+	PN="dtc"
+	S=$DIR_DTC_SOURCE
+	VER=`grep "^VERSION = " ${S}/Makefile | awk '{print $NF}'`
+	PAT=`grep "^PATCHLEVEL = " ${S}/Makefile | awk '{print $NF}'`
+	SUB=`grep "^SUBLEVEL = " ${S}/Makefile | awk '{print $NF}'`
+	PV="$VER.$PAT.$SUB"
+
+	echo_date "${PN}: configuring (${PV})"
+	change_dir "${S}"
+	run_cmd $MAKE clean
+
+	echo_date "${PN}: building"
+	if [ "${CBUILD}" != "${CHOST}" ] ; then
+		run_cmd $MAKE V=1 CC=${CHOST}-gcc AR=${CHOST}-ar libfdt
+	else
+		run_cmd $MAKE V=1 libfdt
+	fi
+
+	echo_date "${PN}: installing"
+	run_cmd cp libfdt/libfdt.a "${STAGEDIR}"/usr/lib/
+	run_cmd cp libfdt/libfdt_env.h "${STAGEDIR}"/usr/include/
+	run_cmd cp libfdt/libfdt.h "${STAGEDIR}"/usr/include/
+	run_cmd cp libfdt/fdt.h "${STAGEDIR}"/usr/include/
+
+	run_cmd $MAKE clean
+}
+
+
+build_qemu()
+{
+	pkgs_queued qemu || return 0
+
+	# qemu doesn't have a standard autoconf script
+	local cbuild=${BUILD_TARGET} chost=${HOST_TARGET}
+	BUILD_TARGET= HOST_TARGET=
+
+	if [ "${CBUILD}" != "${CHOST}" ] ; then
+		CROSS_PREFIX="--cross-prefix=${CHOST}-"
+		TARGET_LIST="arm-softmmu"
+		EXTRA_CONFIG_OPTIONS=
+	else
+		CROSS_PREFIX=
+		TARGET_LIST="arm-softmmu,arm-linux-user,armeb-linux-user"
+		EXTRA_CONFIG_OPTIONS=
+	fi
+
+	PV=`"${DIR_QEMU_SOURCE}"/configure --version | head -n1 | awk '{print $NF}'`
+	if [ "${PV}" = "1.4.0" ] ; then
+		EXTRA_CONFIG_OPTIONS=" \
+		${EXTRA_CONFIG_OPTIONS} \
+		--disable-xfsctl \
+		--disable-libiscsi \
+		"
+	else
+		EXTRA_CONFIG_OPTIONS=" \
+		${EXTRA_CONFIG_OPTIONS} \
+		--cxx=DISABLE \
+		--disable-stack-protector \
+		--disable-gcrypt \
+		--disable-vhost-scsi \
+		--disable-tpm \
+		--disable-vhdx \
+		--disable-libusb \
+		"
+	fi
+
+	LINARO_VERSION=
+	if [ -e "${DIR_QEMU_SOURCE}/VERSION.LINARO" ] ; then
+		LINARO_VERSION=`head -n1 "${DIR_QEMU_SOURCE}/VERSION.LINARO"`", "
+	fi
+
+	RELSTR=`"${DIR_QEMU_SOURCE}"/guess-rev.sh "${DIR_QEMU_SOURCE}"`
+
+	build_autotooled_pkg "${DIR_QEMU_SOURCE}" \
+		--with-pkgversion="${LINARO_VERSION}${PACKAGE_VERSION} QEMU ${PV}${RELSTR}" \
+		${CROSS_PREFIX} \
+		--target-list=${TARGET_LIST} \
+		--extra-cflags=-I"${STAGEDIR}"/usr/include/ \
+		--extra-ldflags=-L"${STAGEDIR}"/usr/lib/ \
+		--disable-werror \
+		--disable-debug-info \
+		--disable-pie \
+		--disable-sdl \
+		--disable-curses \
+		--disable-curl \
+		--disable-virtfs \
+		--disable-vnc \
+		--disable-vnc-sasl \
+		--disable-vnc-jpeg \
+		--disable-vnc-png \
+		--disable-xen \
+		--disable-brlapi \
+		--disable-vde \
+		--disable-linux-aio \
+		--disable-attr \
+		--disable-kvm \
+		--disable-uuid \
+		--disable-cap-ng \
+		--disable-vhost-net \
+		--disable-rbd \
+		${EXTRA_CONFIG_OPTIONS}
+
+	BUILD_TARGET=${cbuild} chost=${HOST_TARGET}
+}
+
+
+######################## Now for the actual execution #######################
+
+notice "Building packages" ${PKGS_BUILD}
+
+#
+# Prep a few 3rd party libs if need be
+#
+run_cmd mkdir -p "${STAGEDIR}"/bin "${STAGEDIR}"/usr/lib/pkgconfig "${STAGEDIR}"/usr/include
+if [ "${CBUILD}" != "${CHOST}" ] ; then
+	# need a local compiling wrapper for the staging dir
+	PATH=${STAGEDIR}/bin:${PATH}
+	for x in cpp g++ gcc ld ; do
+		run_cmd cp "${DIR_APP}"/staging-compiler "${STAGEDIR}"/bin/${CHOST}-${x}
+	done
+fi
+build_curses
+build_readline
+build_expat
+
+#
+# Do random add-on packages
+#
+export PKG_CONFIG_PATH="${STAGEDIR}/usr/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+: ${PKG_CONFIG:=pkg-config --static}
+export PKG_CONFIG
+# Don't search system directory
+export PKG_CONFIG_LIBDIR=
+
+build_libusb
+build_hidapi
+build_libftdi
+build_urjtag
+build_gdbproxy
+build_openocd
+build_zlib
+build_libffi
+build_libiconv
+build_gettext
+build_glib
+build_pixman
+build_dtc
+build_qemu
+
+########################### Clean up ###########################
+
+# Now that we're done with the random libraries, punt them
+for d in "${DIR_BUILD}/${CHOST}" ; do
+	run_cmd rm -rf \
+		"${d}"/lib*/pkgconfig \
+		"${d}"/lib*/lib*.a \
+		"${d}"/lib*/lib*.la \
+		"${d}"/include \
+		"${d}"/bin/*-config
+	find "${d}" -depth -type d -exec rmdir {} \; 2>/dev/null
+done
+
+clean_build_dir "${STAGEDIR}"
+
+resume_clear
+
+echo_date "It took $(print_stop_time) to complete"
+
+echo_date "Done"

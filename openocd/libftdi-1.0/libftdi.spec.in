@@ -1,0 +1,70 @@
+%define    enable_async_mode @ENABLE_ASYNC_MODE@
+Summary:   Library to program and control the FTDI USB controller
+Name:      libftdi
+Version:   @VERSION@
+Release:   1
+License:   LGPL for libftdi and GPLv2+linking exception for the C++ wrapper
+Group:     System Environment/Libraries
+Vendor:    Intra2net AG
+Source:    http://www.intra2net.com/en/developer/libftdi/download/%{name}-%{version}.tar.gz
+Buildroot: /tmp/%{name}-%{version}-root
+Requires:  libusb
+BuildRequires: libusb, libusb-devel, pkgconfig, doxygen
+Prefix:    /usr
+URL:       http://www.intra2net.com/en/developer/libftdi
+
+%package   devel
+Summary:   Header files and static libraries for libftdi
+Group:     Development/Libraries
+Requires:  libftdi = %{version}, libusb-devel
+
+%description 
+Library to program and control the FTDI USB controller
+
+%description devel
+Header files and static libraries for libftdi
+
+%prep
+%setup -q
+
+%build
+
+PARAMS=""
+./configure --prefix=%{prefix} \
+    --libdir=%{_libdir} \
+%if %{enable_async_mode}
+    --with-async-mode \
+%endif
+
+make
+
+%install
+make DESTDIR=$RPM_BUILD_ROOT install
+
+# Remove example programs
+rm -f $RPM_BUILD_ROOT/usr/bin/simple
+rm -f $RPM_BUILD_ROOT/usr/bin/bitbang
+rm -f $RPM_BUILD_ROOT/usr/bin/bitbang2
+rm -f $RPM_BUILD_ROOT/usr/bin/bitbang_ft2232
+rm -f $RPM_BUILD_ROOT/usr/bin/bitbang_cbus
+rm -f $RPM_BUILD_ROOT/usr/bin/find_all
+rm -f $RPM_BUILD_ROOT/usr/bin/find_all_pp
+rm -f $RPM_BUILD_ROOT/usr/bin/serial_read
+rm -f $RPM_BUILD_ROOT/usr/bin/baud_test
+
+%clean
+rm -fr $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root)
+%doc COPYING.LIB COPYING.GPL LICENSE
+%{_libdir}/libftdi*.so*
+
+%files devel
+%defattr(-,root,root)
+%doc doc/html doc/man
+%{_bindir}/libftdi-config
+%{prefix}/include/*.h
+%{prefix}/include/*.hpp
+%{_libdir}/libftdi*.*a
+%{_libdir}/pkgconfig/*.pc

@@ -1,0 +1,22 @@
+<!-- The root element of a memory map is <memory-map>.  -->
+
+<!ELEMENT memory-map	(processor)>
+<!ATTLIST memory-map	version		CDATA	#FIXED "1.0">
+
+<!ELEMENT processor		(core, memory)>
+<!ATTLIST processor		name		CDATA	#REQUIRED>
+
+<!ELEMENT core			(memory)>
+<!ATTLIST core			name		CDATA	#REQUIRED
+						start		CDATA	#REQUIRED
+						length		CDATA	#REQUIRED>
+
+<!ELEMENT memory		(property)>
+<!ATTLIST memory		name		CDATA	#REQUIRED
+						start		CDATA	#REQUIRED
+						length		CDATA	#REQUIRED
+						access		CDATA	#REQUIRED>
+
+<!ELEMENT property		(#PCDATA)>
+<!ATTLIST property		name		CDATA	#REQUIRED>
+
