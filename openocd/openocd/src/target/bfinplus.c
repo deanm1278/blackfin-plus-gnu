@@ -273,8 +273,6 @@ static int bfinplus_get_core_reg(struct reg *reg)
 {
 	struct bfinplus_core_reg *bfinplus_reg = reg->arch_info;
 	struct target *target = bfinplus_reg->target;
-	struct bfinplus_common *bfinplus = target_to_bfinplus(target);
-	struct bfinplus_dap *dap = &bfinplus->dap;
 	uint32_t value;
 
 	if (target->state != TARGET_HALTED)
@@ -282,12 +280,225 @@ static int bfinplus_get_core_reg(struct reg *reg)
 		return ERROR_TARGET_NOT_HALTED;
 	}
 
-	value = bfinplus_register_get(dap, map_gdb_core[bfinplus_reg->num]);
+	bfinplus_coreregister_get(target, map_gdb_core[bfinplus_reg->num], &value);
 	buf_set_u32(reg->value, 0, 32, value);
 	reg->valid = 1;
 	reg->dirty = 0;
 
 	return ERROR_OK;
+}
+
+/* This function does not set hardware register.  It just sets the register in
+   the cache and set it's dirty flag.  When restoring context, all dirty
+   registers will be written back to the hardware.  */
+static int bfinplus_set_core_reg(struct reg *reg, uint8_t *buf)
+{
+  struct bfinplus_core_reg *bfinplus_reg = reg->arch_info;
+  struct target *target = bfinplus_reg->target;
+  uint32_t value;
+
+  if (target->state != TARGET_HALTED)
+  {
+    return ERROR_TARGET_NOT_HALTED;
+  }
+
+  value = buf_get_u32(buf, 0, 32);
+  buf_set_u32(reg->value, 0, 32, value);
+  reg->dirty = 1;
+  reg->valid = 1;
+
+  return ERROR_OK;
+}
+
+static const struct reg_arch_type bfinplus_reg_type =
+{
+  .get = bfinplus_get_core_reg,
+  .set = bfinplus_set_core_reg,
+};
+
+/* We does not actually save all registers here.  We just invalidate
+   all registers in the cache.  When an invalid register in the cache
+   is read, its value will then be fetched from hardware.  */
+static void bfinplus_save_context(struct target *target)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int i;
+
+  for (i = 0; i < BFINPLUSNUMCOREREGS; i++)
+  {
+    bfinplus->core_cache->reg_list[i].valid = 0;
+    bfinplus->core_cache->reg_list[i].dirty = 0;
+  }
+}
+
+/* Write dirty registers to hardware.  */
+static void bfinplus_restore_context(struct target *target)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int i;
+
+  for (i = 0; i < BFINPLUSNUMCOREREGS; i++)
+  {
+    struct reg *reg = &bfinplus->core_cache->reg_list[i];
+    struct bfinplus_core_reg *bfinplus_reg = reg->arch_info;
+
+    if (reg->dirty)
+    {
+      uint32_t value = buf_get_u32(reg->value, 0, 32);
+      bfinplus_coreregister_set(target, map_gdb_core[bfinplus_reg->num], value);
+    }
+  }
+}
+
+static void bfinplus_debug_entry(struct target *target)
+{
+  bfinplus_save_context(target);
+}
+
+static int bfinplus_arch_state(struct target *target)
+{
+  return ERROR_FAIL;
+}
+
+static int bfinplus_target_request_data(struct target *target,
+    uint32_t size, uint8_t *buffer)
+{
+  return ERROR_FAIL;
+}
+
+static int bfinplus_halt(struct target *target)
+{
+  struct target *target = bfinplus_reg->target;
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+
+  LOG_DEBUG("target->state: %s", target_state_name(target));
+
+  if (target->state == TARGET_HALTED)
+  {
+    LOG_DEBUG("target was already halted");
+    return ERROR_OK;
+  }
+
+  if (target->state == TARGET_UNKNOWN)
+  {
+    LOG_WARNING("target was in unknown state when halt was requested");
+  }
+
+  if (target->state == TARGET_RESET)
+  {
+    /* FIXME it might be possible to halt while in reset,
+       see other targets for a example.  */
+    LOG_ERROR("can't request a halt while in reset");
+    return ERROR_TARGET_FAILURE;
+  }
+
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
+
+  //TODO: save RETE and P0?
+
+  uint32_t stat;
+  bfinplus_debug_register_get(target, BFINPLUS_DBG_DSCR, &stat);
+  if(stat != 0x50){
+    LOG_ERROR("DSCR value not correct");
+    return ERROR_TARGET_FAILURE;
+  }
+
+  //TODO: save context? USP, SP, FP
+
+  target->debug_reason = DBG_REASON_DBGRQ;
+
+  return ERROR_OK;
+}
+
+static int bfinplus_deassert_reset(struct target *target)
+{
+  return ERROR_OK;
+}
+
+static int bfinplus_get_gdb_reg_list(struct target *target, struct reg **reg_list[],
+                   int *reg_list_size, enum target_register_class reg_class)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int i;
+
+  *reg_list_size = BFIN_NUM_REGS;
+  *reg_list = malloc(sizeof(struct reg*) * (*reg_list_size));
+
+  for (i = 0; i < BFINPLUSNUMCOREREGS; i++)
+    (*reg_list)[i] = &bfinplus->core_cache->reg_list[i];
+
+  for (i = BFINPLUSNUMCOREREGS; i < BFIN_NUM_REGS; i++)
+  {
+    if (i == BFIN_PC_REGNUM)
+      (*reg_list)[i] = &bfinplus->core_cache->reg_list[BFIN_RETE_REGNUM];
+    /* TODO handle CC */
+    else
+      (*reg_list)[i] = &bfinplus_gdb_dummy_reg;
+  }
+
+  return ERROR_OK;
+}
+
+static int bfinplus_checksum_memory(struct target *target,
+    uint32_t address, uint32_t count, uint32_t* checksum)
+{
+  return ERROR_FAIL;
+}
+
+static int bfinplus_blank_check_memory(struct target *target,
+    uint32_t address, uint32_t count, uint32_t* blank)
+{
+  return ERROR_FAIL;
+}
+
+static int bfinplus_run_algorithm(struct target *target,
+    int num_mem_params, struct mem_param *mem_params,
+    int num_reg_params, struct reg_param *reg_params,
+    uint32_t entry_point, uint32_t exit_point,
+    int timeout_ms, void *arch_info)
+{
+  return ERROR_FAIL;
+}
+
+static struct reg_cache *bfinplus_build_reg_cache(struct target *target)
+{
+  /* get pointers to arch-specific information */
+  struct bfinplus_common *bfinplus = target_to_blackfin(target);
+
+  int num_regs = BFINPLUSNUMCOREREGS;
+  struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);
+  struct reg_cache *cache = malloc(sizeof(struct reg_cache));
+  struct reg *reg_list = malloc(sizeof(struct reg) * num_regs);
+  struct bfinplus_core_reg *arch_info = malloc(sizeof(struct bfinplus_core_reg) * num_regs);
+  int i;
+
+  register_init_dummy(&bfinplus_gdb_dummy_reg);
+
+  /* Build the process context cache */
+  cache->name = "bfinplus registers";
+  cache->next = NULL;
+  cache->reg_list = reg_list;
+  cache->num_regs = num_regs;
+  (*cache_p) = cache;
+  bfinplus->core_cache = cache;
+
+  for (i = 0; i < num_regs; i++)
+  {
+    arch_info[i] = bfinplus_core_reg_list_arch_info[i];
+    arch_info[i].target = target;
+    arch_info[i].bfinplus_common = bfinplus;
+    reg_list[i].name = bfinplus_core_reg_list[i];
+    reg_list[i].feature = NULL;
+    reg_list[i].size = 32;
+    reg_list[i].value = calloc(1, 4);
+    reg_list[i].dirty = 0;
+    reg_list[i].valid = 0;
+    reg_list[i].type = &bfinplus_reg_type;
+    reg_list[i].arch_info = &arch_info[i];
+  }
+
+  return cache;
 }
 
 struct target_type bfinplus_target =

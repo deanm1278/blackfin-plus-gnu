@@ -14,9 +14,6 @@
 #include "bfin_insn.h"
 
 #define BFINPLUS_JTAG_DBG_BASE  0x80001000
-#define BFINPLUS_IDCODE			0x02
-#define BFINPLUS_EMUIR			0x08
-#define BFINPLUS_EMUDAT			0x0C
 
 int bfinplus_debug_register_get(struct target *target, uint8_t reg, uint32_t *value)
 {
@@ -27,7 +24,7 @@ int bfinplus_debug_register_get(struct target *target, uint8_t reg, uint32_t *va
 	retval = mem_ap_read(swjdp, buf, sizeof(uint32_t), 1,
 		BFINPLUS_JTAG_DBG_BASE + reg, false);
 
-	*value = ((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3];
+	*value = buf_get_u32(buf, 0, 32);
 
 	return retval;
 }
@@ -37,7 +34,8 @@ int bfinplus_debug_register_set(struct target *target, uint8_t reg, uint32_t val
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin.dap.dap);
 
-	uint8_t buf[] = { (value >> 24) & 0xFF, (value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF };
+	uint8_t buf[4];
+	buf_set_u32(buf, 0, 32, value);
 	retval = mem_ap_write(swjdp, (const)buf, sizeof(uint32_t), 1,
 		BFINPLUS_JTAG_DBG_BASE + reg, false);
 

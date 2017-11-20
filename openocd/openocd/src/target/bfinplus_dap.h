@@ -5,6 +5,15 @@
 #define BFIN_PLUS_APB_AP 1
 #define BFIN_PLUS_JTAG_AP 2
 
+#define BFINPLUS_IDCODE			0x02
+#define BFINPLUS_EMUIR			0x08
+#define BFINPLUS_EMUDAT			0x0C
+#define BFINPLUS_DSCR			0x18
+
+//spooO000oky mystery regs
+#define BFINPLUS_DBG_MYSTERY0	0x00
+#define BFINPLUS_DBG_MYSTERY1C	0x1C
+
 struct bfinplus_dap
 {
 	struct target *target;
