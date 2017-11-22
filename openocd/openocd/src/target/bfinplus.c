@@ -395,20 +395,93 @@ static int bfinplus_halt(struct target *target)
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
 
-  //TODO: save RETE and P0?
-
-  uint32_t stat;
-  bfinplus_debug_register_get(target, BFINPLUS_DBG_DSCR, &stat);
-  if(stat != 0x50){
-    LOG_ERROR("DSCR value not correct");
-    return ERROR_TARGET_FAILURE;
-  }
-
-  //TODO: save context? USP, SP, FP
-
   target->debug_reason = DBG_REASON_DBGRQ;
 
   return ERROR_OK;
+}
+
+static int bfinplus_resume_1(struct target *target, int current,
+    uint32_t address, int handle_breakpoints, int debug_execution, bool step)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+
+  /* We don't handle this for now. */
+  assert(debug_execution == 0);
+
+  /* FIXME handle handle_breakpoints !!!*/
+
+  if (target->state != TARGET_HALTED)
+  {
+    LOG_WARNING("target not halted");
+    return ERROR_TARGET_NOT_HALTED;
+  }
+
+  bfinplus_mmr_get_indirect(target, BFINPLUS_WPIACTL, &bfinplus->dap.wpiactl);//TODO: something with this?
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x202);
+  bfinplus_get_cti(target); //TODO: check these?
+  bfinplus_set_used_ctis(target, 0x00, 0x00, 0x02, 0x01, 0x01);
+
+  bfinplus_mmr_set32(target, BFINPLUS_TRU0_GCTL, 0x01);
+  bfinplus_mmr_set32(target, BFINPLUS_TRU0_SSR69, 0x49);
+
+  bfinplus_restore_context(target); //TODO: only restore specific regs
+
+  if (!current)
+  {
+    bfinplus_coreregister_set(target, map_gdb_core[REG_RETE], address);
+  }
+
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x02);
+  bfinplus_pulse_cti(target);
+
+  bfinplus_set_used_ctis(target, 0x01, 0x00, 0x00, 0x01, 0x00);
+  bfinplus_mmr_set32(target, BFINPLUS_TRU0_GCTL, 0x00);
+  bfinplus_mmr_set32(target, BFINPLUS_TRU0_SSR69, 0x00);
+
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
+  //TODO: save context?
+
+  if (step && !bfinplus->is_stepping)
+  {
+    //bfinplus_dbgctl_bit_set_esstep(jtag_info);
+    bfinplus->is_stepping = 1;
+  }
+  else if (!step && bfinplus->is_stepping)
+  {
+    //bfinplus_dbgctl_bit_clear_esstep(jtag_info);
+    bfinplus->is_stepping = 0;
+  }
+
+  if (!debug_execution)
+  {
+    target->state = TARGET_RUNNING;
+    target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+    LOG_DEBUG("target resumed at 0x%" PRIx32, address);
+  }
+  else
+  {
+    target->state = TARGET_DEBUG_RUNNING;
+    target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
+    LOG_DEBUG("target debug resumed at 0x%" PRIx32, address);
+  }
+
+  bfinplus->is_running = 1;
+  bfinplus->is_interrupted = 0;
+  bfinplus->dmem_control_valid_p = 0;
+  bfinplus->imem_control_valid_p = 0;
+  //bfinplus_emulation_return(jtag_info);
+
+  return ERROR_OK;
+}
+
+static int bfinplus_resume(struct target *target, int current,
+    uint32_t address, int handle_breakpoints, int debug_execution)
+{
+  int retval;
+
+  retval = bfinplus_resume_1(target, current, address, handle_breakpoints, debug_execution, false);
+
+  return retval;
 }
 
 static int bfinplus_deassert_reset(struct target *target)
@@ -440,6 +513,47 @@ static int bfinplus_get_gdb_reg_list(struct target *target, struct reg **reg_lis
   return ERROR_OK;
 }
 
+static int bfinplus_read_memory(struct target *target, uint32_t address,
+    uint32_t size, uint32_t count, uint8_t *buffer)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int retval;
+
+  LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
+
+  if (target->state != TARGET_HALTED)
+  {
+    LOG_WARNING("target not halted");
+    return ERROR_TARGET_NOT_HALTED;
+  }
+
+  //TODO: check boundaries
+  retval = bfinplus_read_mem(jtag_info, address, size, count, buffer);
+
+  return retval;
+}
+
+static int bfinplus_write_memory(struct target *target, uint32_t address,
+    uint32_t size, uint32_t count, const uint8_t *buffer)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int retval;
+
+  LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "",
+      address, size, count);
+
+  if (target->state != TARGET_HALTED)
+  {
+    LOG_WARNING("target not halted");
+    return ERROR_TARGET_NOT_HALTED;
+  }
+
+  //TODO: check boundaries
+  retval = bfinplus_write_mem(target, address, size, count, buffer);
+
+  return retval;
+}
+
 static int bfinplus_checksum_memory(struct target *target,
     uint32_t address, uint32_t count, uint32_t* checksum)
 {
@@ -464,7 +578,7 @@ static int bfinplus_run_algorithm(struct target *target,
 static struct reg_cache *bfinplus_build_reg_cache(struct target *target)
 {
   /* get pointers to arch-specific information */
-  struct bfinplus_common *bfinplus = target_to_blackfin(target);
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
 
   int num_regs = BFINPLUSNUMCOREREGS;
   struct reg_cache **cache_p = register_get_last_cache_p(&target->reg_cache);

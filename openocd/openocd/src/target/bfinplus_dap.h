@@ -14,10 +14,35 @@
 #define BFINPLUS_DBG_MYSTERY0	0x00
 #define BFINPLUS_DBG_MYSTERY1C	0x1C
 
+#define BFINPLUS_TRU0_GCTL 0x200017F4
+#define BFINPLUS_TRU0_SSR69 0x20001114
+#define BFINPLUS_WPIACTL 0x1FC07000
+
+#define BFINPLUS_SYSCTI_SYS_DBGRESTART 0x07
+#define BFINPLUS_PROCCTI_DBGRESTART 0x07
+
+#define BFINPLUS_PROCCTI_BASE 0x20013000
+#define BFINPLUS_SYSCTI_BASE 0x2001A000
+
+#define CTICONTROL_OFFSET 0x00
+#define CTILOCK_OFFSET 0x08
+#define CTIAPPPLUSE_OFFSET 0x1C
+#define CTIINEN_OFFSET 0x20
+#define CTIOUTEN_OFFSET 0xA0
+#define CTILOCKACCESS_OFFSET 0xFB0
+
+struct bfinplus_cti
+{
+	uint32_t ctiinen[8];
+	uint32_t ctiouten[8];
+}
+
 struct bfinplus_dap
 {
 	struct target *target;
 	struct adiv5_dap dap;
+	struct bfinplus_cti syscti;
+	struct bfinplus_cti proccti;
 
 	uint64_t emuir_a;
     uint64_t emuir_b;
@@ -40,5 +65,12 @@ extern int bfinplus_mmr_get_indirect(struct target *, uint32_t, uint32_t *);
 
 extern int bfinplus_mmr_set32(struct target *, uint32_t, uint32_t);
 extern int bfinplus_mmr_get32(struct target *, uint32_t, uint32_t *);
+
+extern int bfinplus_get_cti(struct target *);
+extern int bfinplus_pulse_cti(struct target *);
+extern int bfinplus_set_used_ctis(struct target *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+
+extern int bfinplus_read_mem(struct target *, uint32_t, uint32_t, uint32_t, uint8_t *);
+extern int bfinplus_write_mem(struct target *, uint32_t, uint32_t, uint32_t, const uint8_t *);
 
 #endif /* BFIN_PLUS_DAP_H */

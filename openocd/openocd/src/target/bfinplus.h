@@ -24,8 +24,6 @@ struct bfinplus_common {
 	unsigned int is_corefault:1;
 
 	unsigned int leave_stopped:1;
-	unsigned int status_pending_p:1;
-	unsigned int pending_is_breakpoint:1;
 
 	unsigned int l1_data_a_cache_enabled:1;
 	unsigned int l1_data_b_cache_enabled:1;
