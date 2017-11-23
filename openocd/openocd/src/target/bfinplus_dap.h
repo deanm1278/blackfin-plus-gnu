@@ -1,6 +1,15 @@
 #ifndef BFINPLUS_DAP_H
 #define BFINPLUS_DAP_H
 
+#include "arm_adi_v5.h"
+#include "target.h"
+#include "blackfin_insn.h"
+
+#define WPDA_DISABLE					0
+#define WPDA_WRITE						1
+#define WPDA_READ						2
+#define WPDA_ALL						3
+
 #define BFIN_PLUS_AHB_AP 0
 #define BFIN_PLUS_APB_AP 1
 #define BFIN_PLUS_JTAG_AP 2
@@ -31,6 +40,21 @@
 #define CTIOUTEN_OFFSET 0xA0
 #define CTILOCKACCESS_OFFSET 0xFB0
 
+struct bfinplus_hwwpt
+{
+	uint32_t addr;
+	uint32_t len;
+	int mode;
+	/* If range is true, this hardware watchpoint is combined with the
+	   next watchpoint to form a range watchpoint.  */
+	bool range;
+	/* True if this hardware watchpoint has been used, otherwise false.  */
+	bool used;
+};
+
+#define BFINPLUS_MAX_HWBREAKPOINTS		6
+#define BFINPLUS_MAX_HWWATCHPOINTS		2
+
 struct bfinplus_cti
 {
 	uint32_t ctiinen[8];
@@ -44,14 +68,12 @@ struct bfinplus_dap
 	struct bfinplus_cti syscti;
 	struct bfinplus_cti proccti;
 
-	uint64_t emuir_a;
-    uint64_t emuir_b;
-    uint64_t emudat_out;
-    uint64_t emudat_in;
-
 	uint32_t wpiactl;
 	uint32_t wpdactl;
 	uint32_t wpstat;
+
+	uint32_t hwbps[BLACKFIN_MAX_HWBREAKPOINTS];
+	struct blackfin_hwwpt hwwps[BLACKFIN_MAX_HWWATCHPOINTS];
 }
 
 extern int bfinplus_debug_register_set(struct target *, uint8_t, uint32_t);
@@ -72,5 +94,12 @@ extern int bfinplus_set_used_ctis(struct target *, uint32_t, uint32_t, uint32_t,
 
 extern int bfinplus_read_mem(struct target *, uint32_t, uint32_t, uint32_t, uint8_t *);
 extern int bfinplus_write_mem(struct target *, uint32_t, uint32_t, uint32_t, const uint8_t *);
+
+extern void bfinplus_wpu_init(struct target *);
+extern void bfinplus_wpu_set_wpia(struct target *, int, uint32_t, int);
+extern void bfinplus_wpu_set_wpda(struct target *, int);
+
+extern void bfinplus_core_reset(struct target *);
+extern void bfinplus_system_reset(struct target *);
 
 #endif /* BFIN_PLUS_DAP_H */

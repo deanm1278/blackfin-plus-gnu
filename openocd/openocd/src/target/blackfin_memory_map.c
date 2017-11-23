@@ -263,5 +263,57 @@ int parse_memory_map(struct target *target, const char *memory_map)
 	return ERROR_OK;
 }
 
+int parse_memory_map(struct target *target, const char *memory_map)
+{
+	struct bfinplus_common *blackfin = target_to_bfinplus(target);
+	int retval;
+
+	struct memory_map_parsing_data data;
+
+	data.name = blackfin->part;
+	data.mem_map = calloc(1, sizeof (struct blackfin_mem_map));
+	if (!data.mem_map)
+	{
+		LOG_ERROR("%s: malloc(%"PRIzu") failed",
+			target_name(target), sizeof (struct blackfin_mem_map));
+		return ERROR_FAIL;
+	}
+	data.l1_map = calloc(1, sizeof (struct blackfin_l1_map));
+	if (!data.l1_map)
+	{
+		LOG_ERROR("%s: malloc(%"PRIzu") failed",
+			target_name(target), sizeof (struct blackfin_l1_map));
+		free(data.mem_map);
+		return ERROR_FAIL;
+	}
+	data.processor = NULL;
+	data.core = NULL;
+	data.skip = false;
+
+	XML_Parser parser = XML_ParserCreateNS(NULL, '!');
+	if (parser == NULL)
+		return ERROR_FAIL;
+
+	XML_SetElementHandler(parser, memory_map_start_element, memory_map_end_element);
+	XML_SetCharacterDataHandler(parser, memory_map_character_data);
+	XML_SetUserData(parser, &data);
+
+	retval = XML_Parse(parser, memory_map, strlen(memory_map), 1);
+	if (retval != XML_STATUS_OK)
+	{
+		enum XML_Error err = XML_GetErrorCode(parser);
+		LOG_ERROR("%s: cannot parse XML memory map [%s]",
+			target_name(target), XML_ErrorString(err));
+		free(data.mem_map);
+		free(data.l1_map);
+		return ERROR_FAIL;
+	}
+
+	blackfin->mem_map = data.mem_map;
+	blackfin->l1_map = data.l1_map;
+
+	return ERROR_OK;
+}
+
 #endif
 

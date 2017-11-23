@@ -5,6 +5,7 @@
 #include "helper/log.h"
 #include "helper/types.h"
 #include "helper/binarybuffer.h"
+#include "arm_adi_v5.h"
 
 #include "breakpoints.h"
 #include "register.h"
@@ -443,12 +444,12 @@ static int bfinplus_resume_1(struct target *target, int current,
 
   if (step && !bfinplus->is_stepping)
   {
-    //bfinplus_dbgctl_bit_set_esstep(jtag_info);
+    //bfinplus_dbgctl_bit_set_esstep(target);
     bfinplus->is_stepping = 1;
   }
   else if (!step && bfinplus->is_stepping)
   {
-    //bfinplus_dbgctl_bit_clear_esstep(jtag_info);
+    //bfinplus_dbgctl_bit_clear_esstep(target);
     bfinplus->is_stepping = 0;
   }
 
@@ -469,7 +470,7 @@ static int bfinplus_resume_1(struct target *target, int current,
   bfinplus->is_interrupted = 0;
   bfinplus->dmem_control_valid_p = 0;
   bfinplus->imem_control_valid_p = 0;
-  //bfinplus_emulation_return(jtag_info);
+  //bfinplus_emulation_return(target);
 
   return ERROR_OK;
 }
@@ -482,6 +483,33 @@ static int bfinplus_resume(struct target *target, int current,
   retval = bfinplus_resume_1(target, current, address, handle_breakpoints, debug_execution, false);
 
   return retval;
+}
+
+static int bfinplus_assert_reset(struct target *target)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+
+  LOG_DEBUG("target->state: %s", target_state_name(target));
+
+  bfinplus_system_reset(target);
+  bfinplus_core_reset(target);
+
+  target->state = TARGET_HALTED;
+
+  /* Reset should bring the core out of core fault.  */
+  bfinplus->is_corefault = 0;
+
+  /* Reset should invalidate register cache.  */
+  //TODO: do we need this
+  //register_cache_invalidate(bfinplus->core_cache);
+
+  if (!target->reset_halt)
+  {
+    bfinplus_resume(target, 1, 0, 0, 0);
+    target->state = TARGET_RUNNING;
+  }
+
+  return ERROR_OK;
 }
 
 static int bfinplus_deassert_reset(struct target *target)
@@ -528,7 +556,7 @@ static int bfinplus_read_memory(struct target *target, uint32_t address,
   }
 
   //TODO: check boundaries
-  retval = bfinplus_read_mem(jtag_info, address, size, count, buffer);
+  retval = bfinplus_read_mem(target, address, size, count, buffer);
 
   return retval;
 }
@@ -575,6 +603,375 @@ static int bfinplus_run_algorithm(struct target *target,
   return ERROR_FAIL;
 }
 
+static int bfinplus_add_breakpoint(struct target *target, struct breakpoint *breakpoint)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  struct bfinplus_dap *dap = &bfinplus->dap;
+  int retval;
+
+  assert(breakpoint->set == 0);
+
+  if (breakpoint->type == BKPT_SOFT)
+  {
+    const uint8_t *bp;
+
+    if (breakpoint->length == 2)
+      bp = bfinplus_breakpoint_16;
+    else
+      bp = bfinplus_breakpoint_32;
+
+    retval = bfinplus_read_memory(target, breakpoint->address,
+      breakpoint->length, 1, breakpoint->orig_instr);
+    if (retval != ERROR_OK)
+      return retval;
+
+    retval = bfinplus_write_memory(target, breakpoint->address,
+      breakpoint->length, 1, bp);
+    if (retval != ERROR_OK)
+      return retval;
+  }
+  else /* BKPT_HARD */
+  {
+    int i;
+    for (i = 0; i < BFINPLUS_MAX_HWBREAKPOINTS; i++)
+      if (dap->hwbps[i] == (uint32_t) -1)
+        break;
+    if (i == BFINPLUS_MAX_HWBREAKPOINTS)
+    {
+      LOG_ERROR("%s: no more hardware breakpoint available for 0x%08x",
+        target_name(target), breakpoint->address);
+      return ERROR_FAIL;
+    }
+
+    dap->hwbps[i] = breakpoint->address;
+    if (bfinplus->is_locked)
+    {
+      LOG_WARNING("%s: target is locked, hardware breakpoint [0x%08x] will be set when it's unlocked", target_name(target), breakpoint->address);
+    }
+    else
+    {
+      bfinplus_wpu_set_wpia(target, i, breakpoint->address, 1);
+    }
+  }
+
+  breakpoint->set = 1;
+
+  return ERROR_OK;
+}
+
+static int bfinplus_remove_breakpoint(struct target *target, struct breakpoint *breakpoint)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  struct bfinplus_dap *dap = &bfinplus->dap;
+  int retval;
+
+  assert(breakpoint->set != 0);
+
+  
+
+  if (breakpoint->type == BKPT_SOFT)
+  {
+    retval = bfinplus_write_memory(target, breakpoint->address,
+      breakpoint->length, 1, breakpoint->orig_instr);
+    if (retval != ERROR_OK)
+      return retval;
+  }
+  else /* BKPT_HARD */
+  {
+    int i;
+    for (i = 0; i < BFINPLUS_MAX_HWBREAKPOINTS; i++)
+      if (dap->hwbps[i] == breakpoint->address)
+        break;
+
+    if (i == BFINPLUS_MAX_HWBREAKPOINTS)
+    {
+      LOG_ERROR("%s: no hardware breakpoint at 0x%08x",
+        target_name(target), breakpoint->address);
+      return ERROR_FAIL;
+    }
+
+    dap->hwbps[i] = -1;
+    if (bfinplus->is_locked)
+    {
+      /* The hardware breakpoint will only be set when target is
+         unlocked.  Target cannot be locked again after it's unlocked.
+         So if we are removing a hardware breakpoint when target is
+         locked, that hardware breakpoint has never been set.
+         So we can just quietly remove it.  */
+    }
+    else
+    {
+      bfinplus_wpu_set_wpia(target, i, breakpoint->address, 0);
+    }
+  }
+
+  breakpoint->set = 0;
+
+  return ERROR_OK;
+}
+
+static int bfinplus_add_watchpoint(struct target *target, struct watchpoint *watchpoint)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  struct bfinplus_dap *dap = &bfinplus->dap;
+  int i;
+  bool range;
+
+  /* TODO  provide a method to always use range watchpoint.  */
+
+  if (target->state != TARGET_HALTED)
+    return ERROR_TARGET_NOT_HALTED;
+
+  if (watchpoint->length <= 4
+    && dap->hwwps[0].used
+    && (dap->hwwps[1].used
+      || dap->hwwps[0].range))
+  {
+    LOG_ERROR("all hardware watchpoints are in use.");
+    return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+  }
+
+  if (watchpoint->length > 4
+    && (dap->hwwps[0].used
+      || dap->hwwps[1].used))
+  {
+    LOG_ERROR("no enough hardware watchpoints.");
+    return ERROR_TARGET_RESOURCE_NOT_AVAILABLE;
+  }
+
+  if (watchpoint->length <= 4)
+  {
+    i = dap->hwwps[0].used ? 1 : 0;
+    range = false;
+  }
+  else
+  {
+    i = 0;
+    range = true;
+  }
+
+  dap->hwwps[i].addr = watchpoint->address;
+  dap->hwwps[i].len = watchpoint->length;
+  dap->hwwps[i].range = range;
+  dap->hwwps[i].used = true;
+  switch (watchpoint->rw)
+  {
+  case WPT_READ:
+    dap->hwwps[i].mode = WPDA_READ;
+    break;
+  case WPT_WRITE:
+    dap->hwwps[i].mode = WPDA_WRITE;
+    break;
+  case WPT_ACCESS:
+    dap->hwwps[i].mode = WPDA_ALL;
+    break;
+  }
+  
+  if (bfinplus->is_locked)
+  {
+    LOG_WARNING("%s: target is locked, hardware watchpoint [0x%08x] will be set when it's unlocked", target_name(target), watchpoint->address);
+  }
+  else
+  {
+    bfinplus_wpu_set_wpda(target, i);
+  }
+
+  return ERROR_OK;
+}
+
+static int bfinplus_remove_watchpoint(struct target *target, struct watchpoint *watchpoint)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  struct bfinplus_dap *dap = &bfinplus->dap;
+  int mode;
+  int i;
+
+  /* TODO  provide a method to always use range watchpoint.  */
+
+  if (target->state != TARGET_HALTED)
+    return ERROR_TARGET_NOT_HALTED;
+
+  switch (watchpoint->rw)
+  {
+  case WPT_READ:
+    mode = WPDA_READ;
+    break;
+  case WPT_WRITE:
+    mode = WPDA_WRITE;
+    break;
+  case WPT_ACCESS:
+    mode = WPDA_ALL;
+    break;
+  default:
+    return ERROR_FAIL;
+  }
+
+  for (i = 0; i < BFINPLUS_MAX_HWWATCHPOINTS; i++)
+    if (dap->hwwps[i].addr == watchpoint->address
+      && dap->hwwps[i].len == watchpoint->length
+      && dap->hwwps[i].mode == mode)
+      break;
+
+  if (i == BFINPLUS_MAX_HWWATCHPOINTS)
+  {
+    LOG_ERROR("no hardware watchpoint at 0x%08X length %d.",
+          watchpoint->address, watchpoint->length);
+    return ERROR_FAIL;
+  }
+
+  if (watchpoint->length > 4)
+  {
+    assert (i == 0 && dap->hwwps[i].range);
+  }
+
+  dap->hwwps[i].mode = WPDA_DISABLE;
+  
+  if (bfinplus->is_locked)
+  {
+    /* See the comment in bfinplus_remove_breakpoint.  */
+  }
+  else
+  {
+    bfinplus_wpu_set_wpda(target, i);
+  }
+
+  dap->hwwps[i].addr = 0;
+  dap->hwwps[i].len = 0;
+  dap->hwwps[i].range = false;
+  dap->hwwps[i].used = false;
+
+  return ERROR_OK;
+}
+
+static int bfinplus_target_create(struct target *target, Jim_Interp *interp)
+{
+  struct bfinplus_common *bfinplus = calloc(1, sizeof(struct bfinplus_common));
+  struct Jim_Obj *objPtr;
+  const char *map, *config;
+  char *end;
+
+  target->arch_info = bfinplus;
+
+  bfinplus->common_magic = BFINPLUS_COMMON_MAGIC;
+  strcpy(bfinplus->part, target_name(target));
+  end = strchr(bfinplus->part, '.');
+  if (end)
+    *end = '\0';
+
+  objPtr = Jim_GetGlobalVariableStr(interp, "MEMORY_MAP", JIM_NONE);
+  map = Jim_GetString(objPtr, NULL);
+  parse_memory_map(target, map);
+
+#if 0
+  objPtr = Jim_GetGlobalVariableStr(interp, "BLACKFIN_CONFIG", JIM_NONE);
+  config = Jim_GetString(objPtr, NULL);
+  blackfin_parse_config(target, config);
+#endif
+
+  objPtr = Jim_GetGlobalVariableStr(interp, "SDRRC", JIM_NONE);
+  if (objPtr)
+  {
+    struct bfinplus_sdram_config *sdram_config;
+    long value;
+    int retval;
+    sdram_config = malloc(sizeof (bfinplus->sdram_config));
+    if (!sdram_config)
+    {
+      LOG_ERROR("%s: malloc(%"PRIzu") failed",
+            target_name(target), sizeof (bfinplus->sdram_config));
+      return ERROR_FAIL;
+    }
+    retval = Jim_GetLong(interp, objPtr, &value);
+    if (retval == JIM_OK)
+      sdram_config->sdrrc = value;
+    else
+      return ERROR_FAIL;
+
+    objPtr = Jim_GetGlobalVariableStr(interp, "SDBCTL", JIM_NONE);
+    if (!objPtr)
+    {
+      LOG_ERROR("%s: SDBCTL is not defined", target_name(target));
+      return ERROR_FAIL;
+    }
+    retval = Jim_GetLong(interp, objPtr, &value);
+    if (retval == JIM_OK)
+      sdram_config->sdbctl = value;
+    else
+      return ERROR_FAIL;
+
+    objPtr = Jim_GetGlobalVariableStr(interp, "SDGCTL", JIM_NONE);
+    if (!objPtr)
+    {
+      LOG_ERROR("%s: SDGCTL is not defined", target_name(target));
+      return ERROR_FAIL;
+    }
+    retval = Jim_GetLong(interp, objPtr, &value);
+    if (retval == JIM_OK)
+      sdram_config->sdgctl = value;
+    else
+      return ERROR_FAIL;
+
+    bfinplus->sdram_config = sdram_config;
+  }
+  else
+    bfinplus->sdram_config = NULL;
+
+  objPtr = Jim_GetGlobalVariableStr(interp, "DDRCTL0", JIM_NONE);
+  if (objPtr)
+  {
+    struct bfinplus_ddr_config *ddr_config;
+    long value;
+    int retval;
+    ddr_config = malloc(sizeof (bfinplus->ddr_config));
+    if (!ddr_config)
+    {
+      LOG_ERROR("%s: malloc(%"PRIzu") failed",
+            target_name(target), sizeof (bfinplus->ddr_config));
+      return ERROR_FAIL;
+    }
+    retval = Jim_GetLong(interp, objPtr, &value);
+    if (retval == JIM_OK)
+      ddr_config->ddrctl0 = value;
+    else
+      return ERROR_FAIL;
+
+    objPtr = Jim_GetGlobalVariableStr(interp, "DDRCTL1", JIM_NONE);
+    if (!objPtr)
+    {
+      LOG_ERROR("%s: DDRCTL1 is not defined", target_name(target));
+      return ERROR_FAIL;
+    }
+    retval = Jim_GetLong(interp, objPtr, &value);
+    if (retval == JIM_OK)
+      ddr_config->ddrctl1 = value;
+    else
+      return ERROR_FAIL;
+
+    objPtr = Jim_GetGlobalVariableStr(interp, "DDRCTL2", JIM_NONE);
+    if (!objPtr)
+    {
+      LOG_ERROR("%s: DDRCTL2 is not defined", target_name(target));
+      return ERROR_FAIL;
+    }
+    retval = Jim_GetLong(interp, objPtr, &value);
+    if (retval == JIM_OK)
+      ddr_config->ddrctl2 = value;
+    else
+      return ERROR_FAIL;
+
+    bfinplus->ddr_config = ddr_config;
+  }
+  else
+    bfinplus->ddr_config = NULL;
+
+  bfinplus->dmem_control_valid_p = 0;
+  bfinplus->imem_control_valid_p = 0;
+  bfinplus->dmem_control = 0;
+  bfinplus->imem_control = 0;
+
+  return ERROR_OK;
+}
+
 static struct reg_cache *bfinplus_build_reg_cache(struct target *target)
 {
   /* get pointers to arch-specific information */
@@ -614,6 +1011,212 @@ static struct reg_cache *bfinplus_build_reg_cache(struct target *target)
 
   return cache;
 }
+
+static int bfinplus_init_target(struct command_context *cmd_ctx,
+    struct target *target)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+
+  bfinplus->dap.target = target;
+  bfinplus_build_reg_cache(target);
+  return ERROR_OK;
+}
+
+static int bfinplus_calculate_wait_clocks(void)
+{
+  int clocks;
+  int frequency;
+
+  /* The following default numbers of wait clock for various cables are
+     tested on a BF537 stamp board, on which U-Boot is running.
+     CCLK is set to 62MHz and SCLK is set to 31MHz, which is the lowest
+     frequency I can set in BF537 stamp Linux kernel.
+
+     The test is done by dumping memory from 0x20000000 to 0x20000010 using
+     GDB and gdbproxy:
+
+     (gdb) dump memory u-boot.bin 0x20000000 0x20000010
+     (gdb) shell hexdump -C u-boot.bin
+
+     With an incorrect number of wait clocks, the first 4 bytes will be
+     duplicated by the second 4 bytes.  */
+
+  clocks = -1;
+  frequency = jtag_get_speed_khz();
+
+  if (strcmp(jtag_get_name(), "ftdi") == 0)
+  {
+    /* For full speed ftdi device, we only need 3 wait clocks.  For
+       high speed ftdi device, we need 5 wait clocks when its frequency
+       is less than or equal to 6000.  We need a function like
+
+        bool ftdi_is_high_speed(void)
+
+       to distinguish them.  But currently ftdi driver does not provide
+       such a function.  So we just set wait clocks to 5 for both cases. */
+
+    if (frequency <= 6000)
+      clocks = 5;
+    else if (frequency <= 15000)
+      clocks = 12;
+    else
+      clocks = 21;
+  }
+  else if (strcmp(jtag_get_name(), "ice1000") == 0
+       || strcmp(jtag_get_name(), "ice2000") == 0)
+  {
+    if (frequency <= 5000)
+      clocks = 5;
+    else if (frequency <= 10000)
+      clocks = 11;
+    else if (frequency <= 17000)
+      clocks = 19;
+    else /* <= 25MHz */
+      clocks = 30;
+  }
+  else
+  {
+    /* intended empty */
+  }
+
+  if (clocks == -1)
+  {
+    clocks = 30;
+    LOG_WARNING("%s: untested cable running at %d KHz, set wait_clocks to %d",
+      jtag_get_name(), frequency, clocks);
+  }
+
+  return clocks;
+}
+
+static int bfinplus_examine(struct target *target)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  struct bfinplus_dap *dap = &bfinplus->dap;
+  int i;
+
+  if (!target_was_examined(target))
+  {
+    target_set_examined(target);
+
+    dap->dbgctl = 0;
+    dap->dbgstat = 0;
+    dap->emuir_a = BLACKFIN_INSN_ILLEGAL;
+    dap->emuir_b = BLACKFIN_INSN_ILLEGAL;
+    dap->emudat_out = 0;
+    dap->emudat_in = 0;
+
+    dap->wpiactl = 0;
+    dap->wpdactl = 0;
+    dap->wpstat = 0;
+    for (i = 0; i < BFINPLUS_MAX_HWBREAKPOINTS; i++)
+      dap->hwbps[i] = -1;
+    for (i = 0; i < BFINPLUS_MAX_HWWATCHPOINTS; i++)
+    {
+      dap->hwwps[i].addr = 0;
+      dap->hwwps[i].len = 0;
+      dap->hwwps[i].mode = WPDA_DISABLE;
+      dap->hwwps[i].range = false;
+      dap->hwwps[i].used = false;
+    }
+
+    dap->emupc = -1;
+  }
+
+  bfinplus_wait_clocks = bfinplus_calculate_wait_clocks();
+
+  return ERROR_OK;
+}
+
+COMMAND_HANDLER(bfinplus_handle_wpu_init_command)
+{
+  struct target *target = get_current_target(CMD_CTX);
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  struct bfinplus_dap *dap = &bfinplus->dap;
+
+  if (!target_was_examined(target))
+  {
+    LOG_ERROR("target not examined yet");
+    return ERROR_FAIL;
+  }
+
+  bfinplus_wpu_init(target);
+  return ERROR_OK;
+}
+
+COMMAND_HANDLER(bfinplus_handle_sdram_init_command)
+{
+  struct target *target = get_current_target(CMD_CTX);
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int retval;
+
+  if (!target_was_examined(target))
+  {
+    LOG_ERROR("target not examined yet");
+    return ERROR_FAIL;
+  }
+  if (!bfinplus->sdram_config)
+  {
+    LOG_ERROR("no SDRAM config");
+    return ERROR_FAIL;
+  }
+
+  retval = bfinplus_sdram_init(target);
+  return retval;
+}
+
+COMMAND_HANDLER(bfinplus_handle_ddr_init_command)
+{
+  struct target *target = get_current_target(CMD_CTX);
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  int retval;
+
+  if (!target_was_examined(target))
+  {
+    LOG_ERROR("target not examined yet");
+    return ERROR_FAIL;
+  }
+  if (!bfinplus->ddr_config)
+  {
+    LOG_ERROR("no DDR config");
+    return ERROR_FAIL;
+  }
+
+  retval = bfinplus_ddr_init(target);
+  return retval;
+}
+
+static const struct command_registration bfinplus_exec_command_handlers[] = {
+  {
+    .name = "wpu_init",
+    .handler = bfinplus_handle_wpu_init_command,
+    .mode = COMMAND_EXEC,
+    .help = "Initialize Watchpoint Unit",
+  },
+  {
+    .name = "sdram_init",
+    .handler = bfinplus_handle_sdram_init_command,
+    .mode = COMMAND_EXEC,
+    .help = "Initialize SDRAM",
+  },
+  {
+    .name = "ddr_init",
+    .handler = bfinplus_handle_ddr_init_command,
+    .mode = COMMAND_EXEC,
+    .help = "Initialize DDR",
+  },
+  COMMAND_REGISTRATION_DONE
+};
+
+static const struct command_registration bfinplus_command_handlers[] = {
+  {
+    .name = "bfinplus",
+    .mode = COMMAND_ANY,
+    .help = "bfinplus command group",
+    .chain = bfinplus_exec_command_handlers,
+  },
+  COMMAND_REGISTRATION_DONE
+};
 
 struct target_type bfinplus_target =
 {

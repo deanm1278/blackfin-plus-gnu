@@ -22,7 +22,7 @@
 #ifndef BFIN_PLUS_MEM_H
 #define BFIN_PLUS_MEM_H
 
-struct blackfin_mem_map
+struct bfinplus_mem_map
 {
 	uint32_t sdram;
 	uint32_t sdram_end;
@@ -40,7 +40,7 @@ struct blackfin_mem_map
 	uint32_t coremmr;
 };
 
-struct blackfin_l1_map
+struct bfinplus_l1_map
 {
 	uint32_t l1;
 	uint32_t l1_data_a;
@@ -61,5 +61,22 @@ struct blackfin_l1_map
 	uint32_t l1_scratch_end;
 	uint32_t l1_end;
 };
+
+struct bfinplus_sdram_config
+{
+	uint16_t sdrrc;
+	uint16_t sdbctl;
+	uint32_t sdgctl;
+};
+
+struct bfinplus_ddr_config
+{
+	uint32_t ddrctl0;
+	uint32_t ddrctl1;
+	uint32_t ddrctl2;
+};
+
+extern int bfinplus_sdram_init(struct target *);
+extern int bfinplus_ddr_init(struct target *);
 
 #endif /* BFIN_PLUS_MEM_H */

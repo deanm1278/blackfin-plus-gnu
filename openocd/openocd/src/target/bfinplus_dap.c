@@ -105,6 +105,20 @@ int bfinplus_coreregister_get(struct target *target, enum core_regnum reg, uint3
 	return retval;
 }
 
+static uint32_t bfinplus_get_r0(struct target *target)
+{
+	uint32_t val;
+	bfinplus_coreregister_get(target, REG_R0, &val);
+	return val;
+}
+
+static uint32_t bfinplus_get_p0(struct target *target)
+{
+	uint32_t val;
+	bfinplus_coreregister_get(target, REG_P0, &val);
+	return val;
+}
+
 int bfinplus_coreregister_set(struct target *target, enum core_regnum reg, uint32_t value)
 {
 	int retval;
@@ -118,6 +132,16 @@ int bfinplus_coreregister_set(struct target *target, enum core_regnum reg, uint3
 	bfinplus_emudat_set(target, value);
 	retval = bfinplus_emuir_set(target, blackfin_gen_move(reg, REG_EMUDAT));
 	return retval;
+}
+
+static int bfinplus_set_r0(struct target *target, uint32_t value)
+{
+	return bfinplus_coreregister_set(target, REG_R0, value);
+}
+
+static int bfinplus_set_p0(struct target *target, uint32_t value)
+{
+	return bfinplus_coreregister_set(target, REG_P0, value);
 }
 
 int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *value)
@@ -222,6 +246,7 @@ int bfinplus_mmr_get32(struct target *target, uint8_t addr, uint32_t *value)
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	uint8_t buf[4];
+	//TODO: check cache status?	
 	dap_ap_select(swjdp, BFINPLUS_AHB_AP);
 	retval = mem_ap_read(swjdp, buf, sizeof(uint32_t), 1, addr, false);
 
@@ -238,6 +263,7 @@ int bfinplus_mmr_set32(struct target *target, uint8_t addr, uint32_t value)
 	uint8_t buf[4];
 	dap_ap_select(swjdp, BFINPLUS_AHB_AP);
 	buf_set_u32(buf, 0, 32, value);
+	//TODO: check cache status?	
 	retval = mem_ap_write(swjdp, (const)buf, sizeof(uint32_t), 1, addr, false);
 
 	return retval;
@@ -250,6 +276,7 @@ int bfinplus_read_mem(struct target *target, uint32_t addr,
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	//TODO: set CSW based on size?
+	//TODO: check cache status?	
 	return mem_ap_sel_read_buf(swjdp, BFINPLUS_AHB_AP, buf, size, count, addr);
 }
 
@@ -260,5 +287,214 @@ int bfinplus_write_mem(struct target *target, uint32_t addr,
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	//TODO: set CSW based on size?
+	//TODO: check cache status?	
 	return mem_ap_write(swjdp, buf, size, count, addr, false);
+}
+
+void bfinplus_wpu_init(struct target *target)
+{
+	uint32_t p0, r0;
+	uint32_t wpiactl, wpdactl;
+
+	LOG_DEBUG("-");
+
+	p0 = bfinplus_get_p0(target);
+	r0 = bfinplus_get_r0(target);
+
+	bfinplus_set_p0(target, WPIACTL);
+
+	wpiactl = WPIACTL_WPPWR;bfinplus_set
+
+	bfinplus_set_r0(target, wpiactl);
+
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, 0, REG_R0), TAP_IDLE);
+
+	wpiactl |= WPIACTL_EMUSW5 | WPIACTL_EMUSW4 | WPIACTL_EMUSW3;
+	wpiactl |= WPIACTL_EMUSW2 | WPIACTL_EMUSW1 | WPIACTL_EMUSW0;
+
+	bfinplus_set_r0(target, wpiactl);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, 0, REG_R0), TAP_IDLE);
+
+	wpdactl = WPDACTL_WPDSRC1_A | WPDACTL_WPDSRC0_A;
+
+	bfinplus_set_r0(target, wpdactl);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, WPDACTL - WPIACTL, REG_R0),
+					   TAP_IDLE);
+
+	bfinplus_set_r0(target, 0);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, WPSTAT - WPIACTL, REG_R0),
+					   TAP_IDLE);
+
+	dap->wpiactl = wpiactl;
+	dap->wpdactl = wpdactl;
+
+	bfinplus_set_p0(target, p0);
+	bfinplus_set_r0(target, r0);
+}
+
+static uint32_t wpiaen[] = {
+	WPIACTL_WPIAEN0,
+	WPIACTL_WPIAEN1,
+	WPIACTL_WPIAEN2,
+	WPIACTL_WPIAEN3,
+	WPIACTL_WPIAEN4,
+	WPIACTL_WPIAEN5,
+};
+
+void bfinplus_wpu_set_wpia(struct target *target, int n, uint32_t addr, int enable)
+{
+	uint32_t p0, r0;
+
+	p0 = bfinplus_get_p0(target);
+	r0 = bfinplus_get_r0(target);
+
+	struct bfinplus_common *bfin = target_to_bfinplus(target);
+	struct adiv5_dap *dap = &(bfin->dap.dap);
+
+	bfinplus_coreregister_set(target, REG_P0, WPIACTL);
+	if (enable)
+	{
+		dap->wpiactl += wpiaen[n];
+		bfinplus_coreregister_set(target, REG_R0, addr);
+		bfinplus_emuir_set(target,
+			blackfin_gen_store32_offset(REG_P0, WPIA0 + 4 * n - WPIACTL, REG_R0),
+			TAP_IDLE);
+	}
+	else
+	{
+		dap->wpiactl &= ~wpiaen[n];
+	}
+
+	bfinplus_coreregister_set(target, REG_R0, dap->wpiactl);
+	bfinplus_emuir_set(target,
+		blackfin_gen_store32_offset(REG_P0, 0, REG_R0),
+		TAP_IDLE);
+
+	bfinplus_set_p0(target, p0);
+	bfinplus_set_r0(target, r0);
+}
+
+void bfinplus_wpu_set_wpda(struct target *target, int n)
+{
+	uint32_t p0, r0;
+	uint32_t addr = dap->hwwps[n].addr;
+	uint32_t len = dap->hwwps[n].len;
+	int mode = dap->hwwps[n].mode;
+	bool range = dap->hwwps[n].range;
+
+	struct bfinplus_common *bfin = target_to_bfinplus(target);
+	struct adiv5_dap *dap = &(bfin->dap.dap);
+
+	p0 = bfinplus_get_p0(target);
+	r0 = bfinplus_get_r0(target);
+
+	bfinplus_coreregister_set(target, REG_P0, WPDACTL);
+
+	/* Currently LEN > 4 iff RANGE.  But in future, it can change.  */
+	if (len > 4 || range)
+	{
+		assert (n == 0);
+
+		switch (mode)
+		{
+		case WPDA_DISABLE:
+			dap->wpdactl &= ~WPDACTL_WPDREN01;
+			break;
+        case WPDA_WRITE:
+			dap->wpdactl &= ~WPDACTL_WPDACC0_R;
+			dap->wpdactl |= WPDACTL_WPDREN01 | WPDACTL_WPDACC0_W;
+			break;
+        case WPDA_READ:
+			dap->wpdactl &= ~WPDACTL_WPDACC0_W;
+			dap->wpdactl |= WPDACTL_WPDREN01 | WPDACTL_WPDACC0_R;
+			break;
+        case WPDA_ALL:
+			dap->wpdactl |= WPDACTL_WPDREN01 | WPDACTL_WPDACC0_A;
+			break;
+        default:
+			abort ();
+        }
+		
+		if (mode != WPDA_DISABLE)
+        {
+			bfinplus_coreregister_set(target, REG_R0, addr - 1);
+			bfinplus_emuir_set(target,
+				blackfin_gen_store32_offset(REG_P0, WPDA0 - WPDACTL, REG_R0),
+				TAP_IDLE);
+			bfinplus_coreregister_set(target, REG_R0, addr + len - 1);
+			bfinplus_emuir_set(target,
+				blackfin_gen_store32_offset(REG_P0, WPDA0 + 4 - WPDACTL, REG_R0),
+				TAP_IDLE);
+        }
+    }
+	else
+	{
+		if (n == 0)
+			switch (mode)
+			{
+			case WPDA_DISABLE:
+				dap->wpdactl &= ~WPDACTL_WPDAEN0;
+				break;
+			case WPDA_WRITE:
+				dap->wpdactl &= ~WPDACTL_WPDACC0_R;
+				dap->wpdactl |= WPDACTL_WPDAEN0 | WPDACTL_WPDACC0_W;
+				break;
+			case WPDA_READ:
+				dap->wpdactl &= ~WPDACTL_WPDACC0_W;
+				dap->wpdactl |= WPDACTL_WPDAEN0 | WPDACTL_WPDACC0_R;
+				break;
+			case WPDA_ALL:
+				dap->wpdactl |= WPDACTL_WPDAEN0 | WPDACTL_WPDACC0_A;
+				break;
+			default:
+				abort ();
+			}
+		else
+			switch (mode)
+			{
+			case WPDA_DISABLE:
+				dap->wpdactl &= ~WPDACTL_WPDAEN1;
+				break;
+			case WPDA_WRITE:
+				dap->wpdactl &= ~WPDACTL_WPDACC1_R;
+				dap->wpdactl |= WPDACTL_WPDAEN1 | WPDACTL_WPDACC1_W;
+				break;
+			case WPDA_READ:
+				dap->wpdactl &= ~WPDACTL_WPDACC1_W;
+				dap->wpdactl |= WPDACTL_WPDAEN1 | WPDACTL_WPDACC1_R;
+				break;
+			case WPDA_ALL:
+				dap->wpdactl |= WPDACTL_WPDAEN1 | WPDACTL_WPDACC1_A;
+				break;
+			default:
+				abort ();
+			}
+		if (mode != WPDA_DISABLE)
+        {
+			bfinplus_coreregister_set(target, REG_R0, addr);
+			bfinplus_emuir_set(target,
+				blackfin_gen_store32_offset(REG_P0, WPDA0 + 4 * n - WPDACTL, REG_R0),
+				TAP_IDLE);
+        }
+    }
+
+	bfinplus_coreregister_set(target, REG_R0, dap->wpdactl);
+	bfinplus_emuir_set(target,
+		blackfin_gen_store32_offset(REG_P0, 0, REG_R0),
+		TAP_IDLE);
+
+	bfinplus_set_p0(target, p0);
+	bfinplus_set_r0(target, r0);
+}
+
+void bfinplus_core_reset(struct target *)
+{
+	//TODO: this
+	return ERROR_OK;
+}
+
+void bfinplus_system_reset(struct target *)
+{
+	//TODO: this
+	return ERROR_OK;
 }
