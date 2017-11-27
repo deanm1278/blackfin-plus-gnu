@@ -389,8 +389,6 @@ static int bfinplus_poll(struct target *target)
     //TODO: other values of this register
     else if (value == 0x30)
     {
-      uint16_t cause;
-
       LOG_DEBUG("Target halted");
       target->state = TARGET_HALTED;
 
@@ -449,13 +447,6 @@ static int bfinplus_halt(struct target *target)
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
 
-  uint32_t val;
-  bfinplus_debug_register_get(target, BFINPLUS_DSCR, &val);
-
-  if(val != 0x50){
-    LOG_WARNING("not sure what this value is...");
-  }
-
   target->debug_reason = DBG_REASON_DBGRQ;
 
   return ERROR_OK;
@@ -468,8 +459,6 @@ static int bfinplus_resume_1(struct target *target, int current,
 
   /* We don't handle this for now. */
   assert(debug_execution == 0);
-
-  /* FIXME handle handle_breakpoints !!!*/
 
   if (target->state != TARGET_HALTED)
   {
@@ -500,22 +489,15 @@ static int bfinplus_resume_1(struct target *target, int current,
   bfinplus_mmr_set32(target, BFINPLUS_TRU0_SSR69, 0x00);
 
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
-  //TODO: save context?
 
-  if (step && !bfinplus->is_stepping)
-  {
-    //bfinplus_dbgctl_bit_set_esstep(target);
-    bfinplus->is_stepping = 1;
-  }
-  else if (!step && bfinplus->is_stepping)
-  {
-    //bfinplus_dbgctl_bit_clear_esstep(target);
-    bfinplus->is_stepping = 0;
-  }
+  /* FIXME handle handle_breakpoints !!!*/
+
+  bfinplus_set_used_ctis(target, 0x01, 0x02, 0x02, 0x01, 0x00);
 
   if (!debug_execution)
   {
     target->state = TARGET_RUNNING;
+    //will this restore RETE, R0, P0? Idk we might need to do that here
     target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
     LOG_DEBUG("target resumed at 0x%" PRIx32, address);
   }
@@ -530,7 +512,11 @@ static int bfinplus_resume_1(struct target *target, int current,
   bfinplus->is_interrupted = 0;
   bfinplus->dmem_control_valid_p = 0;
   bfinplus->imem_control_valid_p = 0;
-  //bfinplus_emulation_return(target);
+
+  bfinplus_pulse_cti(target);
+
+  bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTIOUTEN_OFFSET + (7 << 2), 0x0); //PROCCTI_CTIOUTEN7 = 0
+  bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTIINEN_OFFSET + (7 << 2), 0x0); //SYSCTI_CTINEN7 = 0
 
   return ERROR_OK;
 }
@@ -562,15 +548,17 @@ static int bfinplus_assert_reset(struct target *target)
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
 
-  target->state = TARGET_HALTED;
-
   bfinplus_system_reset(target);
+
+  //TODO: I think there should be an event hook here to deal with clock setup
+
+  target->state = TARGET_HALTED;
 
   /* Reset should bring the core out of core fault.  */
   bfinplus->is_corefault = 0;
 
   /* Reset should invalidate register cache.  */
-  //TODO: do we need this
+  //TODO: do we need this?
   //register_cache_invalidate(bfinplus->core_cache);
 
   if (!target->reset_halt)
@@ -614,7 +602,6 @@ static int bfinplus_get_gdb_reg_list(struct target *target, struct reg **reg_lis
 static int bfinplus_read_memory(struct target *target, uint32_t address,
     uint32_t size, uint32_t count, uint8_t *buffer)
 {
-  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
   int retval;
 
   LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "", address, size, count);
@@ -634,7 +621,6 @@ static int bfinplus_read_memory(struct target *target, uint32_t address,
 static int bfinplus_write_memory(struct target *target, uint32_t address,
     uint32_t size, uint32_t count, const uint8_t *buffer)
 {
-  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
   int retval;
 
   LOG_DEBUG("address: 0x%8.8" PRIx32 ", size: 0x%8.8" PRIx32 ", count: 0x%8.8" PRIx32 "",
@@ -917,7 +903,7 @@ static int bfinplus_target_create(struct target *target, Jim_Interp *interp)
 {
   struct bfinplus_common *bfinplus = calloc(1, sizeof(struct bfinplus_common));
   struct Jim_Obj *objPtr;
-  const char *map, *config;
+  const char *map;
   char *end;
   struct jtag_tap *tap = target->tap;
 
@@ -1210,14 +1196,13 @@ static int bfinplus_examine(struct target *target)
 
 static int bfinplus_init_debug_access(struct target *target)
 {
-  struct bfinplus_common *bfin = target_to_bfinplus(target);
   int retval;
 
   LOG_DEBUG(" ");
 
   //TODO: what should we do here?
-
-  return ERROR_OK;
+  retval = ERROR_OK;
+  return retval;
 }
 
 
@@ -1235,8 +1220,6 @@ COMMAND_HANDLER(bfinplus_handle_dbginit_command)
 COMMAND_HANDLER(bfinplus_handle_wpu_init_command)
 {
   struct target *target = get_current_target(CMD_CTX);
-  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
-  struct bfinplus_dap *dap = &bfinplus->dap;
 
   if (!target_was_examined(target))
   {

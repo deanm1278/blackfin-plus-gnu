@@ -4,6 +4,7 @@
 #include "target.h"
 #include "bfinplus_mem.h"
 #include "bfinplus_dap.h"
+#include "blackfin_memory_map.h"
 
 #define BFINPLUSNUMCOREREGS 53
 #define BFINPLUS_COMMON_MAGIC 0x13751375
@@ -16,8 +17,8 @@ struct bfinplus_common {
 	struct bfinplus_dap dap;
 	const struct blackfin_mem_map *mem_map;
 	const struct blackfin_l1_map *l1_map;
-	const struct blackfin_sdram_config *sdram_config;
-	const struct blackfin_ddr_config *ddr_config;
+	const struct bfinplus_sdram_config *sdram_config;
+	const struct bfinplus_ddr_config *ddr_config;
 
 	struct reg_cache *core_cache;
 

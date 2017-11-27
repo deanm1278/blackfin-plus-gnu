@@ -232,12 +232,12 @@ int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *va
 
 	if (addr == BFINPLUS_L1DM_DCTL)
     {
-		bfin->dmem_control = value;
+		bfin->dmem_control = *value;
 		bfin->dmem_control_valid_p = 1;
     }
 	else if (addr == BFINPLUS_L1IM_ICTL)
     {
-		bfin->imem_control = value;
+		bfin->imem_control = *value;
 		bfin->imem_control_valid_p = 1;
     }
 
@@ -257,7 +257,7 @@ int bfinplus_mmr_set_indirect(struct target *target, uint32_t addr, uint32_t val
     {
 		if (bfin->dmem_control_valid_p
 			&& bfin->dmem_control == value)
-			return;
+			return ERROR_OK;
 		else
 		{
 			bfin->dmem_control = value;
@@ -268,7 +268,7 @@ int bfinplus_mmr_set_indirect(struct target *target, uint32_t addr, uint32_t val
     {
 		if (bfin->imem_control_valid_p
 			&& bfin->imem_control == value)
-			return;
+			return ERROR_OK;
 		else
 		{
 			bfin->imem_control = value;
@@ -427,7 +427,7 @@ int bfinplus_write_mem(struct target *target, uint32_t addr,
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	//TODO: set CSW based on size?
-	//TODO: check cache status?	
+	cache_status_get(target);
 	return mem_ap_write(swjdp, buf, size, count, addr, true);
 }
 
