@@ -6,6 +6,7 @@
 
 #include "target.h"
 #include "blackfin.h"
+#include "bfinplus.h"
 #include "blackfin_memory_map.h"
 
 
@@ -263,7 +264,7 @@ int parse_memory_map(struct target *target, const char *memory_map)
 	return ERROR_OK;
 }
 
-int parse_memory_map(struct target *target, const char *memory_map)
+int parse_memory_map_bfinplus(struct target *target, const char *memory_map)
 {
 	struct bfinplus_common *blackfin = target_to_bfinplus(target);
 	int retval;

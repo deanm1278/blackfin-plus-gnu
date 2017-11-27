@@ -115,7 +115,10 @@ BLACKFIN_SRC = \
 	blackfin_insn.c \
 	blackfin_jtag.c \
 	blackfin_mem.c \
-	blackfin_memory_map.c
+	blackfin_memory_map.c \
+	bfinplus.c \
+	bfinplus_dap.c \
+	bfinplus_mem.c
 
 MIPS32_SRC = \
 	mips32.c \

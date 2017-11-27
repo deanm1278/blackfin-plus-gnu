@@ -123,8 +123,13 @@ void dap_ap_select(struct adiv5_dap *dap, uint8_t ap)
 
 static int dap_setup_accessport_csw(struct adiv5_dap *dap, uint32_t csw)
 {
+#if 0
 	csw = csw | CSW_DBGSWENABLE | CSW_MASTER_DEBUG | CSW_HPROT |
 		dap->apcsw[dap->ap_current >> 24];
+#else
+	csw = csw | CSW_HPROT | CSW_SPIDEN | (1 << 24) |
+	CSW_DEVICE_EN | dap->apcsw[dap->ap_current >> 24];
+#endif
 
 	if (csw != dap->ap_csw_value) {
 		/* LOG_DEBUG("DAP: Set CSW %x",csw); */

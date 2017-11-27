@@ -15,7 +15,8 @@
 #include "bfinplus_dap.h"
 #include "bfinplus_mem.h"
 
-#undef UPSTREAM_GDB_SUPPORT
+//#undef UPSTREAM_GDB_SUPPORT
+#define UPSTREAM_GDB_SUPPORT
 
 /* Core Registers
   BFIN_R0_REGNUM = 0,
@@ -269,6 +270,8 @@ static struct reg bfinplus_gdb_dummy_reg =
 static const uint8_t bfinplus_breakpoint_16[] = { 0x25, 0x0 };
 static const uint8_t bfinplus_breakpoint_32[] = { 0x25, 0x0, 0x0, 0x0 };
 
+int bfinplus_wait_clocks = -1;
+
 /* This function reads hardware register and update the value in cache.  */
 static int bfinplus_get_core_reg(struct reg *reg)
 {
@@ -356,6 +359,59 @@ static void bfinplus_debug_entry(struct target *target)
   bfinplus_save_context(target);
 }
 
+static int bfinplus_poll(struct target *target)
+{
+  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+  enum target_state prev_target_state = target->state;
+  uint32_t value;
+
+  if(prev_target_state != TARGET_HALTED){
+    bfinplus_debug_register_get(target, BFINPLUS_DBG_MYSTERY0, &value);
+
+    if (value & 0xFF) //TODO: figure out core fault bits
+    {
+      LOG_WARNING("%s: a double fault has occurred",
+        target_name(target));
+      target->state = TARGET_HALTED;
+      target->debug_reason = DBG_REASON_UNDEFINED;
+      bfinplus->is_corefault = 1;
+
+      if (prev_target_state == TARGET_RUNNING
+        || prev_target_state == TARGET_RESET)
+      {
+        target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+      }
+      else if (prev_target_state == TARGET_DEBUG_RUNNING)
+      {
+        target_call_event_callbacks(target, TARGET_EVENT_DEBUG_HALTED);
+      }
+    }
+    //TODO: other values of this register
+    else if (value == 0x30)
+    {
+      uint16_t cause;
+
+      LOG_DEBUG("Target halted");
+      target->state = TARGET_HALTED;
+
+      target->debug_reason = DBG_REASON_BREAKPOINT;
+
+      bfinplus_debug_entry(target);
+
+    }
+    else if (value == 0x20)
+    {
+      target->state = TARGET_RUNNING;
+      target->debug_reason = DBG_REASON_NOTHALTED;
+    }
+  }
+
+  if (prev_target_state != target->state)
+    LOG_DEBUG("target->state: ==> %s", target_state_name(target));
+
+  return ERROR_OK;
+}
+
 static int bfinplus_arch_state(struct target *target)
 {
   return ERROR_FAIL;
@@ -369,9 +425,6 @@ static int bfinplus_target_request_data(struct target *target,
 
 static int bfinplus_halt(struct target *target)
 {
-  struct target *target = bfinplus_reg->target;
-  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
-
   LOG_DEBUG("target->state: %s", target_state_name(target));
 
   if (target->state == TARGET_HALTED)
@@ -395,6 +448,13 @@ static int bfinplus_halt(struct target *target)
 
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
+
+  uint32_t val;
+  bfinplus_debug_register_get(target, BFINPLUS_DSCR, &val);
+
+  if(val != 0x50){
+    LOG_WARNING("not sure what this value is...");
+  }
 
   target->debug_reason = DBG_REASON_DBGRQ;
 
@@ -485,16 +545,26 @@ static int bfinplus_resume(struct target *target, int current,
   return retval;
 }
 
+static int bfinplus_step(struct target *target, int current,
+    uint32_t address, int handle_breakpoints)
+{
+  //TODO: this
+  return ERROR_OK;
+}
 static int bfinplus_assert_reset(struct target *target)
 {
   struct bfinplus_common *bfinplus = target_to_bfinplus(target);
 
   LOG_DEBUG("target->state: %s", target_state_name(target));
 
-  bfinplus_system_reset(target);
   bfinplus_core_reset(target);
 
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
+
   target->state = TARGET_HALTED;
+
+  bfinplus_system_reset(target);
 
   /* Reset should bring the core out of core fault.  */
   bfinplus->is_corefault = 0;
@@ -849,8 +919,11 @@ static int bfinplus_target_create(struct target *target, Jim_Interp *interp)
   struct Jim_Obj *objPtr;
   const char *map, *config;
   char *end;
+  struct jtag_tap *tap = target->tap;
 
   target->arch_info = bfinplus;
+
+  struct adiv5_dap *dap = &bfinplus->dap.dap;
 
   bfinplus->common_magic = BFINPLUS_COMMON_MAGIC;
   strcpy(bfinplus->part, target_name(target));
@@ -860,7 +933,7 @@ static int bfinplus_target_create(struct target *target, Jim_Interp *interp)
 
   objPtr = Jim_GetGlobalVariableStr(interp, "MEMORY_MAP", JIM_NONE);
   map = Jim_GetString(objPtr, NULL);
-  parse_memory_map(target, map);
+  parse_memory_map_bfinplus(target, map);
 
 #if 0
   objPtr = Jim_GetGlobalVariableStr(interp, "BLACKFIN_CONFIG", JIM_NONE);
@@ -968,6 +1041,17 @@ static int bfinplus_target_create(struct target *target, Jim_Interp *interp)
   bfinplus->imem_control_valid_p = 0;
   bfinplus->dmem_control = 0;
   bfinplus->imem_control = 0;
+
+  /* prepare JTAG information for the new target */
+  bfinplus->jtag_info.tap = tap;
+  bfinplus->jtag_info.scann_size = 4;
+
+  /* Leave (only) generic DAP stuff for debugport_init() */
+  dap->jtag_info = &bfinplus->jtag_info;
+
+  dap->tar_autoincr_block = (1 << 10);
+  dap->memaccess_tck = 80;
+  tap->dap = dap;
 
   return ERROR_OK;
 }
@@ -1093,19 +1177,17 @@ static int bfinplus_examine(struct target *target)
 {
   struct bfinplus_common *bfinplus = target_to_bfinplus(target);
   struct bfinplus_dap *dap = &bfinplus->dap;
+  struct adiv5_dap *swjdp = &dap->dap;
   int i;
+  int retval = ERROR_OK;
+
+  retval = ahbap_debugport_init(swjdp);
+  if (retval != ERROR_OK)
+    return retval;
 
   if (!target_was_examined(target))
   {
     target_set_examined(target);
-
-    dap->dbgctl = 0;
-    dap->dbgstat = 0;
-    dap->emuir_a = BLACKFIN_INSN_ILLEGAL;
-    dap->emuir_b = BLACKFIN_INSN_ILLEGAL;
-    dap->emudat_out = 0;
-    dap->emudat_in = 0;
-
     dap->wpiactl = 0;
     dap->wpdactl = 0;
     dap->wpstat = 0;
@@ -1119,13 +1201,35 @@ static int bfinplus_examine(struct target *target)
       dap->hwwps[i].range = false;
       dap->hwwps[i].used = false;
     }
-
-    dap->emupc = -1;
   }
 
   bfinplus_wait_clocks = bfinplus_calculate_wait_clocks();
 
   return ERROR_OK;
+}
+
+static int bfinplus_init_debug_access(struct target *target)
+{
+  struct bfinplus_common *bfin = target_to_bfinplus(target);
+  int retval;
+
+  LOG_DEBUG(" ");
+
+  //TODO: what should we do here?
+
+  return ERROR_OK;
+}
+
+
+COMMAND_HANDLER(bfinplus_handle_dbginit_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	if (!target_was_examined(target)) {
+		LOG_ERROR("target not examined yet");
+		return ERROR_FAIL;
+	}
+
+	return bfinplus_init_debug_access(target);
 }
 
 COMMAND_HANDLER(bfinplus_handle_wpu_init_command)
@@ -1187,25 +1291,32 @@ COMMAND_HANDLER(bfinplus_handle_ddr_init_command)
 }
 
 static const struct command_registration bfinplus_exec_command_handlers[] = {
-  {
-    .name = "wpu_init",
-    .handler = bfinplus_handle_wpu_init_command,
-    .mode = COMMAND_EXEC,
-    .help = "Initialize Watchpoint Unit",
-  },
-  {
-    .name = "sdram_init",
-    .handler = bfinplus_handle_sdram_init_command,
-    .mode = COMMAND_EXEC,
-    .help = "Initialize SDRAM",
-  },
-  {
-    .name = "ddr_init",
-    .handler = bfinplus_handle_ddr_init_command,
-    .mode = COMMAND_EXEC,
-    .help = "Initialize DDR",
-  },
-  COMMAND_REGISTRATION_DONE
+	{
+		.name = "dbginit",
+		.handler = bfinplus_handle_dbginit_command,
+		.mode = COMMAND_EXEC,
+		.help = "Initialize core debug",
+		.usage = "",
+	},
+	{
+		.name = "wpu_init",
+		.handler = bfinplus_handle_wpu_init_command,
+		.mode = COMMAND_EXEC,
+		.help = "Initialize Watchpoint Unit",
+	},
+	{
+		.name = "sdram_init",
+		.handler = bfinplus_handle_sdram_init_command,
+		.mode = COMMAND_EXEC,
+		.help = "Initialize SDRAM",
+	},
+	{
+		.name = "ddr_init",
+		.handler = bfinplus_handle_ddr_init_command,
+		.mode = COMMAND_EXEC,
+		.help = "Initialize DDR",
+	},
+	COMMAND_REGISTRATION_DONE
 };
 
 static const struct command_registration bfinplus_command_handlers[] = {

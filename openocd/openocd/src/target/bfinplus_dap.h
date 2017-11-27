@@ -10,9 +10,9 @@
 #define WPDA_READ						2
 #define WPDA_ALL						3
 
-#define BFIN_PLUS_AHB_AP 0
-#define BFIN_PLUS_APB_AP 1
-#define BFIN_PLUS_JTAG_AP 2
+#define BFINPLUS_AHB_AP 0
+#define BFINPLUS_APB_AP 1
+#define BFINPLUS_JTAG_AP 2
 
 #define BFINPLUS_IDCODE			0x02
 #define BFINPLUS_EMUIR			0x08
@@ -40,6 +40,17 @@
 #define CTIOUTEN_OFFSET 0xA0
 #define CTILOCKACCESS_OFFSET 0xFB0
 
+#define ENICPLB					0x00000002
+#define IMC						0x00000004
+
+#define ENDCPLB					0x00000002
+#define DMC						0x0000000c
+#define ACACHE_BSRAM			0x00000008
+#define ACACHE_BCACHE			0x0000000c
+
+#define BFINPLUS_L1IM_ICTL 0x1FC01004
+#define BFINPLUS_L1DM_DCTL 0x1FC00004
+
 struct bfinplus_hwwpt
 {
 	uint32_t addr;
@@ -59,7 +70,7 @@ struct bfinplus_cti
 {
 	uint32_t ctiinen[8];
 	uint32_t ctiouten[8];
-}
+};
 
 struct bfinplus_dap
 {
@@ -72,9 +83,9 @@ struct bfinplus_dap
 	uint32_t wpdactl;
 	uint32_t wpstat;
 
-	uint32_t hwbps[BLACKFIN_MAX_HWBREAKPOINTS];
-	struct blackfin_hwwpt hwwps[BLACKFIN_MAX_HWWATCHPOINTS];
-}
+	uint32_t hwbps[BFINPLUS_MAX_HWBREAKPOINTS];
+	struct bfinplus_hwwpt hwwps[BFINPLUS_MAX_HWWATCHPOINTS];
+};
 
 extern int bfinplus_debug_register_set(struct target *, uint8_t, uint32_t);
 extern int bfinplus_debug_register_get(struct target *, uint8_t, uint32_t *);
@@ -101,5 +112,8 @@ extern void bfinplus_wpu_set_wpda(struct target *, int);
 
 extern void bfinplus_core_reset(struct target *);
 extern void bfinplus_system_reset(struct target *);
+
+extern int bfinplus_cti_register_set(struct target *, uint32_t, uint32_t, uint32_t);
+extern int bfinplus_cti_register_get(struct target *, uint32_t, uint32_t, uint32_t *);
 
 #endif /* BFIN_PLUS_DAP_H */

@@ -11,12 +11,65 @@
 #include "bfinplus.h"
 #include "bfinplus_dap.h"
 #include "bfinplus_mem.h"
-#include "bfin_insn.h"
+#include "blackfin_insn.h"
 
 #define BFINPLUS_JTAG_DBG_BASE  0x80001000
 
+#define WPIACTL							0x1FC07000
+#define WPIACTL_WPAND					0x02000000
+#define WPIACTL_EMUSW5					0x01000000
+#define WPIACTL_EMUSW4					0x00800000
+#define WPIACTL_WPICNTEN5				0x00400000
+#define WPIACTL_WPICNTEN4				0x00200000
+#define WPIACTL_WPIAEN5					0x00100000
+#define WPIACTL_WPIAEN4					0x00080000
+#define WPIACTL_WPIRINV45				0x00040000
+#define WPIACTL_WPIREN45				0x00020000
+#define WPIACTL_EMUSW3					0x00010000
+#define WPIACTL_EMUSW2					0x00008000
+#define WPIACTL_WPICNTEN3				0x00004000
+#define WPIACTL_WPICNTEN2				0x00002000
+#define WPIACTL_WPIAEN3					0x00001000
+#define WPIACTL_WPIAEN2					0x00000800
+#define WPIACTL_WPIRINV23				0x00000400
+#define WPIACTL_WPIREN23				0x00000200
+#define WPIACTL_EMUSW1					0x00000100
+#define WPIACTL_EMUSW0					0x00000080
+#define WPIACTL_WPICNTEN1				0x00000040
+#define WPIACTL_WPICNTEN0				0x00000020
+#define WPIACTL_WPIAEN1					0x00000010
+#define WPIACTL_WPIAEN0					0x00000008
+#define WPIACTL_WPIRINV01				0x00000004
+#define WPIACTL_WPIREN01				0x00000002
+#define WPIACTL_WPPWR					0x00000001
+#define WPIA0							0x1FC07040
+
+#define WPDACTL							0x1FC07100
+#define WPDACTL_WPDACC1_R				0x00002000
+#define WPDACTL_WPDACC1_W				0x00001000
+#define WPDACTL_WPDACC1_A				0x00003000
+#define WPDACTL_WPDSRC1_1				0x00000800
+#define WPDACTL_WPDSRC1_0				0x00000400
+#define WPDACTL_WPDSRC1_A				0x00000c00
+#define WPDACTL_WPDACC0_R				0x00000200
+#define WPDACTL_WPDACC0_W				0x00000100
+#define WPDACTL_WPDACC0_A				0x00000300
+#define WPDACTL_WPDSRC0_1				0x00000080
+#define WPDACTL_WPDSRC0_0				0x00000040
+#define WPDACTL_WPDSRC0_A				0x000000c0
+#define WPDACTL_WPDCNTEN1				0x00000020
+#define WPDACTL_WPDCNTEN0				0x00000010
+#define WPDACTL_WPDAEN1					0x00000008
+#define WPDACTL_WPDAEN0					0x00000004
+#define WPDACTL_WPDRINV01				0x00000002
+#define WPDACTL_WPDREN01				0x00000001
+#define WPDA0							0x1FC07140
+
+#define WPSTAT							0x1FC07200
+
 int bfinplus_debug_register_get(struct target *target, uint8_t reg, uint32_t *value)
 {
+	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
@@ -32,21 +85,22 @@ int bfinplus_debug_register_get(struct target *target, uint8_t reg, uint32_t *va
 
 int bfinplus_debug_register_set(struct target *target, uint8_t reg, uint32_t value)
 {
+	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	uint8_t buf[4];
 	dap_ap_select(swjdp, BFINPLUS_APB_AP);
 	buf_set_u32(buf, 0, 32, value);
-	retval = mem_ap_write(swjdp, (const)buf, sizeof(uint32_t), 1,
-		BFINPLUS_JTAG_DBG_BASE + reg, false);
+	retval = mem_ap_write(swjdp, buf, sizeof(uint32_t), 1,
+		BFINPLUS_JTAG_DBG_BASE + reg, true);
 
 	return retval;
 }
 
 static int bfinplus_emuir_set(struct target *target, uint32_t value)
 {
-	return bfinplus_debug_register_set(target, BFINPLUS_EMUIR, value);
+	return bfinplus_debug_register_set(target, BFINPLUS_EMUIR, value << 16);
 }
 
 static int bfinplus_emudat_set(struct target *target, uint32_t value)
@@ -56,12 +110,13 @@ static int bfinplus_emudat_set(struct target *target, uint32_t value)
 
 static int bfinplus_emudat_get(struct target *target, uint32_t *value)
 {
-	return bfinplus_register_get(target, BFINPLUS_EMUDAT, value);
+	return bfinplus_debug_register_get(target, BFINPLUS_EMUDAT, value);
 }
 
-static int bfinplus_cti_register_get(struct target *target, uint32_t ctibase,
+int bfinplus_cti_register_get(struct target *target, uint32_t ctibase,
 uint32_t offset, uint32_t *value)
 {
+	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
@@ -75,22 +130,23 @@ uint32_t offset, uint32_t *value)
 	return retval;
 }
 
-static int bfinplus_cti_register_set(struct target *target, uint32_t ctibase,
+int bfinplus_cti_register_set(struct target *target, uint32_t ctibase,
 uint32_t offset, uint32_t value)
 {
+	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	uint8_t buf[4];
 	dap_ap_select(swjdp, BFINPLUS_APB_AP);
 	buf_set_u32(buf, 0, 32, value);
-	retval = mem_ap_write(swjdp, (const)buf, sizeof(uint32_t), 1,
-		ctibase + offset, false);
+	retval = mem_ap_write(swjdp, buf, sizeof(uint32_t), 1,
+		ctibase + offset, true);
 
 	return retval;
 }
 
-int bfinplus_coreregister_get(struct target *target, enum core_regnum reg, uint32_t *value)
+int bfinplus_coreregister_get(struct target *target, enum core_regnum regnum, uint32_t *value)
 {
 	int retval;
 	uint8_t reg = regnum&0xFF;
@@ -105,21 +161,21 @@ int bfinplus_coreregister_get(struct target *target, enum core_regnum reg, uint3
 	return retval;
 }
 
-static uint32_t bfinplus_get_r0(struct target *target)
+static inline uint32_t bfinplus_get_r0(struct target *target)
 {
 	uint32_t val;
 	bfinplus_coreregister_get(target, REG_R0, &val);
 	return val;
 }
 
-static uint32_t bfinplus_get_p0(struct target *target)
+static inline uint32_t bfinplus_get_p0(struct target *target)
 {
 	uint32_t val;
 	bfinplus_coreregister_get(target, REG_P0, &val);
 	return val;
 }
 
-int bfinplus_coreregister_set(struct target *target, enum core_regnum reg, uint32_t value)
+int bfinplus_coreregister_set(struct target *target, enum core_regnum regnum, uint32_t value)
 {
 	int retval;
 	uint8_t reg = regnum&0xFF;
@@ -134,12 +190,12 @@ int bfinplus_coreregister_set(struct target *target, enum core_regnum reg, uint3
 	return retval;
 }
 
-static int bfinplus_set_r0(struct target *target, uint32_t value)
+static inline int bfinplus_set_r0(struct target *target, uint32_t value)
 {
 	return bfinplus_coreregister_set(target, REG_R0, value);
 }
 
-static int bfinplus_set_p0(struct target *target, uint32_t value)
+static inline int bfinplus_set_p0(struct target *target, uint32_t value)
 {
 	return bfinplus_coreregister_set(target, REG_P0, value);
 }
@@ -150,7 +206,18 @@ int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *va
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
-	LOG_DEBUG("get mmr indirect 0x%08" PRIx32, reg);
+	LOG_DEBUG("get mmr indirect 0x%08" PRIx32, addr);
+	if (addr == BFINPLUS_L1DM_DCTL)
+    {
+		if (bfin->dmem_control_valid_p)
+			return bfin->dmem_control;
+    }
+	else if (addr == BFINPLUS_L1IM_ICTL)
+    {
+		if (bfin->imem_control_valid_p)
+			return bfin->imem_control;
+    }
+
 	dap_ap_select(swjdp, BFINPLUS_APB_AP);
 
 	//EMUDAT = addr
@@ -163,6 +230,17 @@ int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *va
 	bfinplus_emuir_set(target, blackfin_gen_move(REG_EMUDAT, REG_R0));
 	retval = bfinplus_emudat_get(target, value);
 
+	if (addr == BFINPLUS_L1DM_DCTL)
+    {
+		bfin->dmem_control = value;
+		bfin->dmem_control_valid_p = 1;
+    }
+	else if (addr == BFINPLUS_L1IM_ICTL)
+    {
+		bfin->imem_control = value;
+		bfin->imem_control_valid_p = 1;
+    }
+
 	return retval;
 }
 
@@ -172,8 +250,31 @@ int bfinplus_mmr_set_indirect(struct target *target, uint32_t addr, uint32_t val
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
-	LOG_DEBUG("set mmr indirect 0x%08" PRIx32, reg);
+	LOG_DEBUG("set mmr indirect 0x%08" PRIx32, addr);
 	dap_ap_select(swjdp, BFINPLUS_APB_AP);
+
+	if (addr == BFINPLUS_L1DM_DCTL)
+    {
+		if (bfin->dmem_control_valid_p
+			&& bfin->dmem_control == value)
+			return;
+		else
+		{
+			bfin->dmem_control = value;
+			bfin->dmem_control_valid_p = 1;
+		}
+    }
+	else if (addr == BFINPLUS_L1IM_ICTL)
+    {
+		if (bfin->imem_control_valid_p
+			&& bfin->imem_control == value)
+			return;
+		else
+		{
+			bfin->imem_control = value;
+			bfin->imem_control_valid_p = 1;
+		}
+    }
 
 	//EMUDAT = addr
 	bfinplus_emudat_set(target, addr);
@@ -188,14 +289,50 @@ int bfinplus_mmr_set_indirect(struct target *target, uint32_t addr, uint32_t val
 	return retval;
 }
 
+static void cache_status_get(struct target *target)
+{
+	struct bfinplus_common *bfinplus = target_to_bfinplus(target);
+	uint32_t val;
+	LOG_DEBUG("cache status get" PRIx32);
+	if (!bfinplus->dmem_control_valid_p)
+		/* No need to set dmem_control and dmem_control_valid_p here.
+		   mmr_read will handle them.  */
+		bfinplus_mmr_get_indirect(target, BFINPLUS_L1DM_DCTL, &val);
+	if (!bfinplus->imem_control_valid_p)
+		/* No need to set imem_control and imem_control_valid_p here.
+		   mmr_read will handle them.  */
+		bfinplus_mmr_get_indirect(target, BFINPLUS_L1IM_ICTL, &val);
+
+	if (bfinplus->imem_control & IMC)
+		bfinplus->l1_code_cache_enabled = 1;
+	else
+		bfinplus->l1_code_cache_enabled = 0;
+
+	if ((bfinplus->dmem_control & DMC) == ACACHE_BCACHE)
+	{
+		bfinplus->l1_data_a_cache_enabled = 1;
+		bfinplus->l1_data_b_cache_enabled = 1;
+	}
+	else if ((bfinplus->dmem_control & DMC) == ACACHE_BSRAM)
+	{
+		bfinplus->l1_data_a_cache_enabled = 1;
+		bfinplus->l1_data_b_cache_enabled = 0;
+	}
+	else
+	{
+		bfinplus->l1_data_a_cache_enabled = 0;
+		bfinplus->l1_data_b_cache_enabled = 0;
+	}
+}
+
 int bfinplus_get_cti(struct target *target)
 {
 	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
-	struct cti *proccti = &(bfin->dap.proccti);
-	struct cti *syscti = &(bfin->dap.syscti);
+	struct bfinplus_cti *proccti = &(bfin->dap.proccti);
+	struct bfinplus_cti *syscti = &(bfin->dap.syscti);
 
-	LOG_DEBUG("reading CTI registers 0x%08" PRIx32);
+	LOG_DEBUG("reading CTI registers" PRIx32);
 	
 	bfinplus_cti_register_get(target, BFINPLUS_PROCCTI_BASE, 
 		CTIINEN_OFFSET, &proccti->ctiinen[0]);
@@ -216,8 +353,8 @@ int bfinplus_set_used_ctis(struct target *target, uint32_t procinen0, uint32_t p
 {
 	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
-	struct cti *proccti = &(bfin->dap.proccti);
-	struct cti *syscti = &(bfin->dap.syscti);
+	struct bfinplus_cti *proccti = &(bfin->dap.proccti);
+	struct bfinplus_cti *syscti = &(bfin->dap.syscti);
 
 	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTIINEN_OFFSET, procinen0);
 	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTIOUTEN_OFFSET + (7 * sizeof(uint32_t)), procouten7);
@@ -234,37 +371,40 @@ int bfinplus_set_used_ctis(struct target *target, uint32_t procinen0, uint32_t p
 	return retval;
 }
 
-int bfinplus_pulse_cti(struct target *)
+int bfinplus_pulse_cti(struct target *target)
 {
 	//always pulse on channel 1
 	return bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTIAPPPLUSE_OFFSET, 0x02);
 }
 
-int bfinplus_mmr_get32(struct target *target, uint8_t addr, uint32_t *value)
+int bfinplus_mmr_get32(struct target *target, uint32_t addr, uint32_t *value)
 {
+	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	uint8_t buf[4];
 	//TODO: check cache status?	
 	dap_ap_select(swjdp, BFINPLUS_AHB_AP);
-	retval = mem_ap_read(swjdp, buf, sizeof(uint32_t), 1, addr, false);
+	retval = mem_ap_read(swjdp, buf, sizeof(uint32_t), 1, addr, true);
 
 	*value = buf_get_u32(buf, 0, 32);
 
 	return retval;
 }
 
-int bfinplus_mmr_set32(struct target *target, uint8_t addr, uint32_t value)
+int bfinplus_mmr_set32(struct target *target, uint32_t addr, uint32_t value)
 {
+	int retval;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	uint8_t buf[4];
+	cache_status_get(target);
 	dap_ap_select(swjdp, BFINPLUS_AHB_AP);
 	buf_set_u32(buf, 0, 32, value);
 	//TODO: check cache status?	
-	retval = mem_ap_write(swjdp, (const)buf, sizeof(uint32_t), 1, addr, false);
+	retval = mem_ap_write(swjdp, buf, sizeof(uint32_t), 1, addr, true);
 
 	return retval;
 }
@@ -276,7 +416,7 @@ int bfinplus_read_mem(struct target *target, uint32_t addr,
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	//TODO: set CSW based on size?
-	//TODO: check cache status?	
+	cache_status_get(target);
 	return mem_ap_sel_read_buf(swjdp, BFINPLUS_AHB_AP, buf, size, count, addr);
 }
 
@@ -288,13 +428,15 @@ int bfinplus_write_mem(struct target *target, uint32_t addr,
 
 	//TODO: set CSW based on size?
 	//TODO: check cache status?	
-	return mem_ap_write(swjdp, buf, size, count, addr, false);
+	return mem_ap_write(swjdp, buf, size, count, addr, true);
 }
 
 void bfinplus_wpu_init(struct target *target)
 {
 	uint32_t p0, r0;
 	uint32_t wpiactl, wpdactl;
+	struct bfinplus_common *bfin = target_to_bfinplus(target);
+	struct bfinplus_dap *dap = &(bfin->dap);
 
 	LOG_DEBUG("-");
 
@@ -303,27 +445,25 @@ void bfinplus_wpu_init(struct target *target)
 
 	bfinplus_set_p0(target, WPIACTL);
 
-	wpiactl = WPIACTL_WPPWR;bfinplus_set
+	wpiactl = WPIACTL_WPPWR;
 
 	bfinplus_set_r0(target, wpiactl);
 
-	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, 0, REG_R0), TAP_IDLE);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, 0, REG_R0));
 
 	wpiactl |= WPIACTL_EMUSW5 | WPIACTL_EMUSW4 | WPIACTL_EMUSW3;
 	wpiactl |= WPIACTL_EMUSW2 | WPIACTL_EMUSW1 | WPIACTL_EMUSW0;
 
 	bfinplus_set_r0(target, wpiactl);
-	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, 0, REG_R0), TAP_IDLE);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, 0, REG_R0));
 
 	wpdactl = WPDACTL_WPDSRC1_A | WPDACTL_WPDSRC0_A;
 
 	bfinplus_set_r0(target, wpdactl);
-	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, WPDACTL - WPIACTL, REG_R0),
-					   TAP_IDLE);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, WPDACTL - WPIACTL, REG_R0));
 
 	bfinplus_set_r0(target, 0);
-	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, WPSTAT - WPIACTL, REG_R0),
-					   TAP_IDLE);
+	bfinplus_emuir_set(target, blackfin_gen_store32_offset(REG_P0, WPSTAT - WPIACTL, REG_R0));
 
 	dap->wpiactl = wpiactl;
 	dap->wpdactl = wpdactl;
@@ -349,7 +489,7 @@ void bfinplus_wpu_set_wpia(struct target *target, int n, uint32_t addr, int enab
 	r0 = bfinplus_get_r0(target);
 
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
-	struct adiv5_dap *dap = &(bfin->dap.dap);
+	struct bfinplus_dap *dap = &(bfin->dap);
 
 	bfinplus_coreregister_set(target, REG_P0, WPIACTL);
 	if (enable)
@@ -357,8 +497,7 @@ void bfinplus_wpu_set_wpia(struct target *target, int n, uint32_t addr, int enab
 		dap->wpiactl += wpiaen[n];
 		bfinplus_coreregister_set(target, REG_R0, addr);
 		bfinplus_emuir_set(target,
-			blackfin_gen_store32_offset(REG_P0, WPIA0 + 4 * n - WPIACTL, REG_R0),
-			TAP_IDLE);
+			blackfin_gen_store32_offset(REG_P0, WPIA0 + 4 * n - WPIACTL, REG_R0));
 	}
 	else
 	{
@@ -367,8 +506,7 @@ void bfinplus_wpu_set_wpia(struct target *target, int n, uint32_t addr, int enab
 
 	bfinplus_coreregister_set(target, REG_R0, dap->wpiactl);
 	bfinplus_emuir_set(target,
-		blackfin_gen_store32_offset(REG_P0, 0, REG_R0),
-		TAP_IDLE);
+		blackfin_gen_store32_offset(REG_P0, 0, REG_R0));
 
 	bfinplus_set_p0(target, p0);
 	bfinplus_set_r0(target, r0);
@@ -377,13 +515,13 @@ void bfinplus_wpu_set_wpia(struct target *target, int n, uint32_t addr, int enab
 void bfinplus_wpu_set_wpda(struct target *target, int n)
 {
 	uint32_t p0, r0;
+	struct bfinplus_common *bfin = target_to_bfinplus(target);
+	struct bfinplus_dap *dap = &(bfin->dap);
+
 	uint32_t addr = dap->hwwps[n].addr;
 	uint32_t len = dap->hwwps[n].len;
 	int mode = dap->hwwps[n].mode;
 	bool range = dap->hwwps[n].range;
-
-	struct bfinplus_common *bfin = target_to_bfinplus(target);
-	struct adiv5_dap *dap = &(bfin->dap.dap);
 
 	p0 = bfinplus_get_p0(target);
 	r0 = bfinplus_get_r0(target);
@@ -419,12 +557,10 @@ void bfinplus_wpu_set_wpda(struct target *target, int n)
         {
 			bfinplus_coreregister_set(target, REG_R0, addr - 1);
 			bfinplus_emuir_set(target,
-				blackfin_gen_store32_offset(REG_P0, WPDA0 - WPDACTL, REG_R0),
-				TAP_IDLE);
+				blackfin_gen_store32_offset(REG_P0, WPDA0 - WPDACTL, REG_R0));
 			bfinplus_coreregister_set(target, REG_R0, addr + len - 1);
 			bfinplus_emuir_set(target,
-				blackfin_gen_store32_offset(REG_P0, WPDA0 + 4 - WPDACTL, REG_R0),
-				TAP_IDLE);
+				blackfin_gen_store32_offset(REG_P0, WPDA0 + 4 - WPDACTL, REG_R0));
         }
     }
 	else
@@ -473,28 +609,49 @@ void bfinplus_wpu_set_wpda(struct target *target, int n)
         {
 			bfinplus_coreregister_set(target, REG_R0, addr);
 			bfinplus_emuir_set(target,
-				blackfin_gen_store32_offset(REG_P0, WPDA0 + 4 * n - WPDACTL, REG_R0),
-				TAP_IDLE);
+				blackfin_gen_store32_offset(REG_P0, WPDA0 + 4 * n - WPDACTL, REG_R0));
         }
     }
 
 	bfinplus_coreregister_set(target, REG_R0, dap->wpdactl);
 	bfinplus_emuir_set(target,
-		blackfin_gen_store32_offset(REG_P0, 0, REG_R0),
-		TAP_IDLE);
+		blackfin_gen_store32_offset(REG_P0, 0, REG_R0));
 
 	bfinplus_set_p0(target, p0);
 	bfinplus_set_r0(target, r0);
 }
 
-void bfinplus_core_reset(struct target *)
+void bfinplus_core_reset(struct target *target)
 {
-	//TODO: this
-	return ERROR_OK;
+	uint32_t val;
+	bfinplus_mmr_set32(target, 0x2000001C, 0x04); //RCU0_BCODE.HALT = 1
+
+	bfinplus_mmr_set_indirect(target, 0x20000000, 0x01); //RCU0_CTL.SYSRST = 1
+
+	bfinplus_mmr_get32(target, 0x20000004, &val); //read RCU0_STAT
+	if(val != 0x00002129){
+		LOG_ERROR("RCU0_STAT not right");
+	}
+
+	bfinplus_mmr_set32(target, 0x20000064, 0x0); //RCU0_MSG_SET = 0
+	bfinplus_mmr_set32(target, 0x20000068, 0x0); //RCU0_MSG_CLR = 0
+
+	bfinplus_mmr_set32(target, 0x20048030, 0x00003010); //TAPC0_DBGCTL
+
+	bfinplus_mmr_get32(target, 0x20000060, &val); //read RCU0_MSG
+	if(val != 0x00410000){
+		LOG_ERROR("RCU0_MSG not right");
+	}
+
 }
 
-void bfinplus_system_reset(struct target *)
+void bfinplus_system_reset(struct target *target)
 {
-	//TODO: this
-	return ERROR_OK;
+	bfinplus_mmr_set_indirect(target, BFINPLUS_L1IM_ICTL, 0x207);
+
+	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTILOCKACCESS_OFFSET, 0xC5ACCE55);
+	bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTILOCKACCESS_OFFSET, 0xC5ACCE55);
+	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTILOCKACCESS_OFFSET, 0xC5ACCE55);
+	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTICONTROL_OFFSET, 0x01);
+	bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTICONTROL_OFFSET, 0x01);
 }

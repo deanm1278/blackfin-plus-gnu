@@ -105,6 +105,7 @@ extern struct target_type nds32_v3m_target;
 extern struct target_type or1k_target;
 extern struct target_type quark_x10xx_target;
 extern struct target_type blackfin_target;
+extern struct target_type bfinplus_target;
 
 static struct target_type *target_types[] = {
 	&arm7tdmi_target,
@@ -135,6 +136,7 @@ static struct target_type *target_types[] = {
 	&or1k_target,
 	&quark_x10xx_target,
 	&blackfin_target,
+	&bfinplus_target,
 	NULL,
 };
 
