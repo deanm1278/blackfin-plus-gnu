@@ -28,9 +28,6 @@ struct bfinplus_common {
 	unsigned int is_stepping:1;
 	unsigned int is_corefault:1;
 
-  	unsigned int dmem_control_valid_p:1;
-  	unsigned int imem_control_valid_p:1;
-
 	unsigned int leave_stopped:1;
 
 	unsigned int l1_data_a_cache_enabled:1;

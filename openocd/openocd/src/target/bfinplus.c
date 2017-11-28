@@ -361,13 +361,13 @@ static void bfinplus_debug_entry(struct target *target)
 
 static int bfinplus_poll(struct target *target)
 {
-  struct bfinplus_common *bfinplus = target_to_bfinplus(target);
   enum target_state prev_target_state = target->state;
   uint32_t value;
 
   if(prev_target_state != TARGET_HALTED){
     bfinplus_debug_register_get(target, BFINPLUS_DBG_MYSTERY0, &value);
 
+    /*
     if (value & 0xFF) //TODO: figure out core fault bits
     {
       LOG_WARNING("%s: a double fault has occurred",
@@ -386,8 +386,9 @@ static int bfinplus_poll(struct target *target)
         target_call_event_callbacks(target, TARGET_EVENT_DEBUG_HALTED);
       }
     }
+    */
     //TODO: other values of this register
-    else if (value == 0x30)
+    if (value == 0x30)
     {
       LOG_DEBUG("Target halted");
       target->state = TARGET_HALTED;
@@ -401,6 +402,11 @@ static int bfinplus_poll(struct target *target)
     {
       target->state = TARGET_RUNNING;
       target->debug_reason = DBG_REASON_NOTHALTED;
+    }
+    else
+    {
+      LOG_DEBUG("weird value received: 0x%" PRIx32, value);
+      target->state = TARGET_UNKNOWN;
     }
   }
 
@@ -510,8 +516,6 @@ static int bfinplus_resume_1(struct target *target, int current,
 
   bfinplus->is_running = 1;
   bfinplus->is_interrupted = 0;
-  bfinplus->dmem_control_valid_p = 0;
-  bfinplus->imem_control_valid_p = 0;
 
   bfinplus_pulse_cti(target);
 
@@ -543,12 +547,10 @@ static int bfinplus_assert_reset(struct target *target)
 
   LOG_DEBUG("target->state: %s", target_state_name(target));
 
-  bfinplus_core_reset(target);
-
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
   bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
 
-  bfinplus_system_reset(target);
+  bfinplus_core_reset(target);
 
   //TODO: I think there should be an event hook here to deal with clock setup
 
@@ -572,6 +574,10 @@ static int bfinplus_assert_reset(struct target *target)
 
 static int bfinplus_deassert_reset(struct target *target)
 {
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
+  bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
+
+  bfinplus_system_reset(target);
   return ERROR_OK;
 }
 
@@ -1023,8 +1029,6 @@ static int bfinplus_target_create(struct target *target, Jim_Interp *interp)
   else
     bfinplus->ddr_config = NULL;
 
-  bfinplus->dmem_control_valid_p = 0;
-  bfinplus->imem_control_valid_p = 0;
   bfinplus->dmem_control = 0;
   bfinplus->imem_control = 0;
 

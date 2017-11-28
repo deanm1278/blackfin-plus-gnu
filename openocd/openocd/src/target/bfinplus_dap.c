@@ -207,16 +207,6 @@ int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *va
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	LOG_DEBUG("get mmr indirect 0x%08" PRIx32, addr);
-	if (addr == BFINPLUS_L1DM_DCTL)
-    {
-		if (bfin->dmem_control_valid_p)
-			return bfin->dmem_control;
-    }
-	else if (addr == BFINPLUS_L1IM_ICTL)
-    {
-		if (bfin->imem_control_valid_p)
-			return bfin->imem_control;
-    }
 
 	dap_ap_select(swjdp, BFINPLUS_APB_AP);
 
@@ -233,12 +223,10 @@ int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *va
 	if (addr == BFINPLUS_L1DM_DCTL)
     {
 		bfin->dmem_control = *value;
-		bfin->dmem_control_valid_p = 1;
     }
 	else if (addr == BFINPLUS_L1IM_ICTL)
     {
 		bfin->imem_control = *value;
-		bfin->imem_control_valid_p = 1;
     }
 
 	return retval;
@@ -255,25 +243,11 @@ int bfinplus_mmr_set_indirect(struct target *target, uint32_t addr, uint32_t val
 
 	if (addr == BFINPLUS_L1DM_DCTL)
     {
-		if (bfin->dmem_control_valid_p
-			&& bfin->dmem_control == value)
-			return ERROR_OK;
-		else
-		{
-			bfin->dmem_control = value;
-			bfin->dmem_control_valid_p = 1;
-		}
+		bfin->dmem_control = value;
     }
 	else if (addr == BFINPLUS_L1IM_ICTL)
     {
-		if (bfin->imem_control_valid_p
-			&& bfin->imem_control == value)
-			return ERROR_OK;
-		else
-		{
-			bfin->imem_control = value;
-			bfin->imem_control_valid_p = 1;
-		}
+		bfin->imem_control = value;
     }
 
 	//EMUDAT = addr
@@ -294,14 +268,9 @@ static void cache_status_get(struct target *target)
 	struct bfinplus_common *bfinplus = target_to_bfinplus(target);
 	uint32_t val;
 	LOG_DEBUG("cache status get" PRIx32);
-	if (!bfinplus->dmem_control_valid_p)
-		/* No need to set dmem_control and dmem_control_valid_p here.
-		   mmr_read will handle them.  */
-		bfinplus_mmr_get_indirect(target, BFINPLUS_L1DM_DCTL, &val);
-	if (!bfinplus->imem_control_valid_p)
-		/* No need to set imem_control and imem_control_valid_p here.
-		   mmr_read will handle them.  */
-		bfinplus_mmr_get_indirect(target, BFINPLUS_L1IM_ICTL, &val);
+
+	bfinplus_mmr_get_indirect(target, BFINPLUS_L1DM_DCTL, &val);
+	bfinplus_mmr_get_indirect(target, BFINPLUS_L1IM_ICTL, &val);
 
 	if (bfinplus->imem_control & IMC)
 		bfinplus->l1_code_cache_enabled = 1;
@@ -400,7 +369,7 @@ int bfinplus_mmr_set32(struct target *target, uint32_t addr, uint32_t value)
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	uint8_t buf[4];
-	cache_status_get(target);
+	//cache_status_get(target);
 	dap_ap_select(swjdp, BFINPLUS_AHB_AP);
 	buf_set_u32(buf, 0, 32, value);
 	//TODO: check cache status?	
@@ -416,7 +385,7 @@ int bfinplus_read_mem(struct target *target, uint32_t addr,
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	//TODO: set CSW based on size?
-	cache_status_get(target);
+	//cache_status_get(target);
 	return mem_ap_sel_read_buf(swjdp, BFINPLUS_AHB_AP, buf, size, count, addr);
 }
 
@@ -427,7 +396,7 @@ int bfinplus_write_mem(struct target *target, uint32_t addr,
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	//TODO: set CSW based on size?
-	cache_status_get(target);
+	//cache_status_get(target);
 	return mem_ap_write(swjdp, buf, size, count, addr, true);
 }
 
@@ -626,6 +595,7 @@ void bfinplus_core_reset(struct target *target)
 	uint32_t val;
 	bfinplus_mmr_set32(target, 0x2000001C, 0x04); //RCU0_BCODE.HALT = 1
 
+	bfinplus_mmr_set_indirect(target, BFINPLUS_L1IM_ICTL, 0x207);
 	bfinplus_mmr_set_indirect(target, 0x20000000, 0x01); //RCU0_CTL.SYSRST = 1
 
 	bfinplus_mmr_get32(target, 0x20000004, &val); //read RCU0_STAT
@@ -642,7 +612,6 @@ void bfinplus_core_reset(struct target *target)
 	if(val != 0x00410000){
 		LOG_ERROR("RCU0_MSG not right");
 	}
-
 }
 
 void bfinplus_system_reset(struct target *target)
@@ -654,4 +623,14 @@ void bfinplus_system_reset(struct target *target)
 	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTILOCKACCESS_OFFSET, 0xC5ACCE55);
 	bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTICONTROL_OFFSET, 0x01);
 	bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTICONTROL_OFFSET, 0x01);
+
+	//TODO: we can't hardcode this
+	bfinplus_mmr_set32(target, 0x2000200C, 0x42042442); //CGU0_DIV
+	bfinplus_mmr_set32(target, 0x20002000, 0x00002000); //CGU0_CTL
+
+	bfinplus_mmr_set_indirect(target, BFINPLUS_L1IM_ICTL, 0x207);
+	bfinplus_mmr_set_indirect(target, BFINPLUS_L1IM_ICTL, 0x000);
+
+	bfinplus_mmr_set32(target, 0x200D007F, 0x03000000); //USB0_SOFT_RST
+	bfinplus_mmr_set32(target, 0x20063020, 0x00000000); //EPPI0_CTL 
 }
