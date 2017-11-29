@@ -263,7 +263,7 @@ int bfinplus_mmr_set_indirect(struct target *target, uint32_t addr, uint32_t val
 	return retval;
 }
 
-static void cache_status_get(struct target *target)
+void bfinplus_cache_status_get(struct target *target)
 {
 	struct bfinplus_common *bfinplus = target_to_bfinplus(target);
 	uint32_t val;

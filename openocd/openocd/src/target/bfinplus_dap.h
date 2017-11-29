@@ -116,4 +116,6 @@ extern void bfinplus_system_reset(struct target *);
 extern int bfinplus_cti_register_set(struct target *, uint32_t, uint32_t, uint32_t);
 extern int bfinplus_cti_register_get(struct target *, uint32_t, uint32_t, uint32_t *);
 
+extern void bfinplus_cache_status_get(struct target *);
+
 #endif /* BFIN_PLUS_DAP_H */

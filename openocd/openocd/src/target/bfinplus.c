@@ -394,8 +394,21 @@ static int bfinplus_poll(struct target *target)
       target->state = TARGET_HALTED;
 
       target->debug_reason = DBG_REASON_BREAKPOINT;
+      
+      bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY1C, 0x02);
+      bfinplus_debug_register_set(target, BFINPLUS_DBG_MYSTERY0, 0x01);
 
       bfinplus_debug_entry(target);
+
+		if (prev_target_state == TARGET_RUNNING
+			|| prev_target_state == TARGET_RESET)
+		{
+			target_call_event_callbacks(target, TARGET_EVENT_HALTED);
+		}
+		else if (prev_target_state == TARGET_DEBUG_RUNNING)
+		{
+			target_call_event_callbacks(target, TARGET_EVENT_DEBUG_HALTED);
+		}
 
     }
     else if (value == 0x20)
@@ -480,7 +493,7 @@ static int bfinplus_resume_1(struct target *target, int current,
   bfinplus_mmr_set32(target, BFINPLUS_TRU0_GCTL, 0x01);
   bfinplus_mmr_set32(target, BFINPLUS_TRU0_SSR69, 0x49);
 
-  bfinplus_restore_context(target); //TODO: only restore specific regs
+  bfinplus_restore_context(target);
 
   if (!current)
   {
@@ -498,29 +511,32 @@ static int bfinplus_resume_1(struct target *target, int current,
 
   /* FIXME handle handle_breakpoints !!!*/
 
-  bfinplus_set_used_ctis(target, 0x01, 0x02, 0x02, 0x01, 0x00);
+  if(!step)
+	  bfinplus_set_used_ctis(target, 0x01, 0x02, 0x02, 0x01, 0x00);
 
   if (!debug_execution)
   {
-    target->state = TARGET_RUNNING;
-    //will this restore RETE, R0, P0? Idk we might need to do that here
-    target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
-    LOG_DEBUG("target resumed at 0x%" PRIx32, address);
+	target->state = TARGET_RUNNING;
+	//will this restore RETE, R0, P0? Idk we might need to do that here
+	target_call_event_callbacks(target, TARGET_EVENT_RESUMED);
+	LOG_DEBUG("target resumed at 0x%" PRIx32, address);
   }
   else
   {
-    target->state = TARGET_DEBUG_RUNNING;
-    target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
-    LOG_DEBUG("target debug resumed at 0x%" PRIx32, address);
+	target->state = TARGET_DEBUG_RUNNING;
+	target_call_event_callbacks(target, TARGET_EVENT_DEBUG_RESUMED);
+	LOG_DEBUG("target debug resumed at 0x%" PRIx32, address);
   }
+  
+  if(!step){
+	  bfinplus->is_running = 1;
+	  bfinplus->is_interrupted = 0;
 
-  bfinplus->is_running = 1;
-  bfinplus->is_interrupted = 0;
+	  bfinplus_pulse_cti(target);
 
-  bfinplus_pulse_cti(target);
-
-  bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTIOUTEN_OFFSET + (7 << 2), 0x0); //PROCCTI_CTIOUTEN7 = 0
-  bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTIINEN_OFFSET + (7 << 2), 0x0); //SYSCTI_CTINEN7 = 0
+	  bfinplus_cti_register_set(target, BFINPLUS_PROCCTI_BASE, CTIOUTEN_OFFSET + (7 << 2), 0x0); //PROCCTI_CTIOUTEN7 = 0
+	  bfinplus_cti_register_set(target, BFINPLUS_SYSCTI_BASE, CTIINEN_OFFSET + (7 << 2), 0x0); //SYSCTI_CTINEN7 = 0
+  }
 
   return ERROR_OK;
 }
@@ -538,8 +554,11 @@ static int bfinplus_resume(struct target *target, int current,
 static int bfinplus_step(struct target *target, int current,
     uint32_t address, int handle_breakpoints)
 {
-  //TODO: this
-  return ERROR_OK;
+	int retval;
+
+	retval = bfinplus_resume_1(target, current, address, handle_breakpoints, false, true);
+
+	return retval;
 }
 static int bfinplus_assert_reset(struct target *target)
 {
@@ -729,11 +748,13 @@ static int bfinplus_remove_breakpoint(struct target *target, struct breakpoint *
 
   assert(breakpoint->set != 0);
 
-  
-
   if (breakpoint->type == BKPT_SOFT)
   {
-    retval = bfinplus_write_memory(target, breakpoint->address,
+	//TODO: figure out why this fails if we don't read memory first
+	uint8_t val[4];
+	bfinplus_read_memory(target, breakpoint->address,
+	        breakpoint->length, 1, val);
+	retval = bfinplus_write_memory(target, breakpoint->address,
       breakpoint->length, 1, breakpoint->orig_instr);
     if (retval != ERROR_OK)
       return retval;
