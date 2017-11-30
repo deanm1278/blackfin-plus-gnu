@@ -203,12 +203,16 @@ static inline int bfinplus_set_p0(struct target *target, uint32_t value)
 int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *value)
 {
 	int retval;
+	uint32_t r0, p0;
 	struct bfinplus_common *bfin = target_to_bfinplus(target);
 	struct adiv5_dap *swjdp = &(bfin->dap.dap);
 
 	LOG_DEBUG("get mmr indirect 0x%08" PRIx32, addr);
 
 	dap_ap_select(swjdp, BFINPLUS_APB_AP);
+
+	p0 = bfinplus_get_p0(target);
+	r0 = bfinplus_get_r0(target);
 
 	//EMUDAT = addr
 	bfinplus_emudat_set(target, addr);
@@ -219,6 +223,9 @@ int bfinplus_mmr_get_indirect(struct target *target, uint32_t addr, uint32_t *va
 	//EMUDAT = R0
 	bfinplus_emuir_set(target, blackfin_gen_move(REG_EMUDAT, REG_R0));
 	retval = bfinplus_emudat_get(target, value);
+
+	bfinplus_set_p0(target, p0);
+	bfinplus_set_r0(target, r0);
 
 	if (addr == BFINPLUS_L1DM_DCTL)
     {
