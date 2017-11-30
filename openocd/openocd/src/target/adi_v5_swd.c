@@ -48,8 +48,12 @@
 
 #include "arm.h"
 #include "arm.h"
+#include "bfinplus.h"
+#include "bfinplus_dap.h"
 #include "arm_adi_v5.h"
 #include <helper/time_support.h>
+
+#include "target_type.h"
 
 #include <transport/transport.h>
 #include <jtag/interface.h>
@@ -310,10 +314,21 @@ static const uint8_t jtag2swd_bitseq[] = {
  */
 int dap_to_swd(struct target *target)
 {
-	struct arm *arm = target_to_arm(target);
 	int retval;
+	struct target_type *type = target->type;
+	struct adiv5_dap *dap;
+	//TODO: we need a better way to do this
+	if(!strcmp(type->name, "bfinplus")){
+			struct bfinplus_common *bfin = target_to_bfinplus(target);
+			struct bfinplus_dap *bfin_dap = &bfin->dap;
+			dap = &bfin_dap->dap;
+	}
+	else{
+		struct arm *arm = target_to_arm(target);
+		dap = arm->dap;
+	}
 
-	if (!arm->dap) {
+	if (!dap) {
 		LOG_ERROR("SWD mode is not available");
 		return ERROR_FAIL;
 	}
@@ -330,7 +345,7 @@ int dap_to_swd(struct target *target)
 		retval = jtag_execute_queue();
 
 	/* set up the DAP's ops vector for SWD mode. */
-	arm->dap->ops = &swd_dap_ops;
+	dap->ops = &swd_dap_ops;
 
 	return retval;
 }
@@ -338,11 +353,21 @@ int dap_to_swd(struct target *target)
 COMMAND_HANDLER(handle_swd_wcr)
 {
 	int retval;
-	struct target *target = get_current_target(CMD_CTX);
-	struct arm *arm = target_to_arm(target);
-	struct adiv5_dap *dap = arm->dap;
 	uint32_t wcr;
 	unsigned trn, scale = 0;
+	struct target *target = get_current_target(CMD_CTX);
+	struct target_type *type = target->type;
+	struct adiv5_dap *dap;
+	//TODO: we need a better way to do this
+	if(!strcmp(type->name, "bfinplus")){
+			struct bfinplus_common *bfin = target_to_bfinplus(target);
+			struct bfinplus_dap *bfin_dap = &bfin->dap;
+			dap = &bfin_dap->dap;
+	}
+	else{
+		struct arm *arm = target_to_arm(target);
+		dap = arm->dap;
+	}
 
 	switch (CMD_ARGC) {
 	/* no-args: just dump state */
@@ -466,12 +491,26 @@ static int swd_select(struct command_context *ctx)
 static int swd_init(struct command_context *ctx)
 {
 	struct target *target = get_current_target(ctx);
-	struct arm *arm = target_to_arm(target);
-	struct adiv5_dap *dap = arm->dap;
-
-	/* Force the DAP's ops vector for SWD mode.
-	 * messy - is there a better way? */
-	arm->dap->ops = &swd_dap_ops;
+	struct target_type *type = target->type;
+	struct adiv5_dap *dap;
+	//TODO: we need a better way to do this
+	if(!strcmp(type->name, "bfinplus")){
+		struct bfinplus_common *bfin = target_to_bfinplus(target);
+		struct bfinplus_dap *bfin_dap = &bfin->dap;
+		dap = &bfin_dap->dap;
+	
+		/* Force the DAP's ops vector for SWD mode.
+		 * messy - is there a better way? */
+		dap->ops = &swd_dap_ops;
+	}
+	else{
+		struct arm *arm = target_to_arm(target);
+		dap = arm->dap;
+	
+		/* Force the DAP's ops vector for SWD mode.
+		 * messy - is there a better way? */
+		arm->dap->ops = &swd_dap_ops;
+	}
 
 	return swd_connect(dap);
 }
