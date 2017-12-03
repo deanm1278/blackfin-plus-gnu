@@ -10,7 +10,7 @@ DIR_GCC_SOURCE=$(pwd)"/../gcc"
 DIR_LDR_UTILS_SOURCE=$(pwd)"/../ldr-utils"
 DIR_GDBPROXY_SOURCE=$(pwd)"/../bfin-gdbproxy"
 DIR_URJTAG_SOURCE=$(pwd)"/../urjtag"
-DIR_OPENOCD_SOURCE=$(pwd)"/../openocd/openocd"
+DIR_OPENOCD_SOURCE=$(pwd)"/../../openocd"
 MAKE="make -j10"
 
 CBUILD= # the system we are compiling on
