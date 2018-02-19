@@ -2694,10 +2694,10 @@ asm_1:
 
 	| RAISE expr
 	{
-	  if (IS_UIMM ($2, 8))
+	  if (IS_UIMM ($2, 4))
 	    {
-	      notethat ("ProgCtrl: RAISE uimm8\n");
-	      $$ = PROGCTRL (9, uimm8 ($2));
+	      notethat ("ProgCtrl: RAISE uimm4\n");
+	      $$ = PROGCTRL (9, uimm4 ($2));
 	    }
 	  else
 	    return yyerror ("Bad value for RAISE");
