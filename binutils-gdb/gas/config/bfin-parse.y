@@ -25,6 +25,8 @@
 #include "elf/common.h"
 #include "elf/bfin.h"
 
+//#define DEBUG
+
 #define DSP32ALU(aopcde, HL, dst1, dst0, src0, src1, s, x, aop) \
 	bfin_gen_dsp32alu (HL, aopcde, aop, s, x, dst0, dst1, src0, src1)
 
@@ -47,6 +49,9 @@
 
 #define LDIMMHALF_R5(reg, h, s, z, hword) \
         bfin_gen_ldimmhalf (reg, h, s, z, hword, 2)
+
+#define LDIMM_R(reg, imm) \
+        bfin_gen_ldimm (reg, imm)
 
 #define LDSTIDXI(ptr, reg, w, sz, z, offset)  \
 	bfin_gen_ldstidxi (ptr, reg, w, sz, z, offset)
@@ -1318,14 +1323,18 @@ asm_1:
 		  notethat ("COMPI2opP: pregs = imm7 (x)\n");
 		  $$ = COMPI2OPP (&$1, imm7 ($3), 0);
 		}
+        else if (IS_CONST ($3) && IS_IMM ($3, 16))
+    {
+      notethat ("LDIMMhalf: regs = luimm16 (x)\n");
+      /* reg, H, S, Z.   */
+      $$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
+    }
 	      else
 		{
-		  if (IS_CONST ($3) && !IS_IMM ($3, 16))
+		  if (IS_CONST ($3) && !IS_UIMM ($3, 32))
 		    return yyerror ("Immediate value out of range");
 
-		  notethat ("LDIMMhalf: regs = luimm16 (x)\n");
-		  /* reg, H, S, Z.   */
-		  $$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
+      $$ = LDIMM_R (&$1, $3);
 		}
 	    }
 	  else

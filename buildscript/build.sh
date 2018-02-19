@@ -11,10 +11,10 @@ DIR_LDR_UTILS_SOURCE=$(pwd)"/../ldr-utils"
 DIR_GDBPROXY_SOURCE=$(pwd)"/../bfin-gdbproxy"
 DIR_URJTAG_SOURCE=$(pwd)"/../urjtag"
 DIR_OPENOCD_SOURCE=$(pwd)"/../../openocd"
-MAKE="make -j10"
+MAKE="make"
 
 CBUILD= # the system we are compiling on
-CHOST= # the system the final compiler will run on
+CHOST="x86_64-w64-mingw32" # the system the final compiler will run on
 
 CBUILD=$($DIR_APP/config.guess)
 BUILD_TARGET="--build=${CBUILD}"
@@ -128,27 +128,27 @@ build_gdbproxy()
 #execution
 #check_prereqs_verbose ${PREREQ_FILE}
 
-#mkdir binutils_build
+mkdir binutils_build
 #mkdir gcc_build
 #mkdir $DIR_ELF_OUTPUT
 
 #build elf toolchain
 
-#build_binutils elf $DIR_ELF_OUTPUT
+build_binutils elf $DIR_ELF_OUTPUT
 #build_gcc elf $DIR_ELF_OUTPUT
 
 #export STAGEDIR=${DIR_BUILD}/staging_build
 #mk_output_dir "staging" "${STAGEDIR}"
 #mkdir $STAGEDIR/
 
-export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
-: ${PKG_CONFIG:=pkg-config --static}
-export PKG_CONFIG
+#export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+#: ${PKG_CONFIG:=pkg-config --static}
+#export PKG_CONFIG
 
 #build_ldr_utils
 
-mkdir openocd_build
-build_openocd $DIR_ELF_OUTPUT
+#mkdir openocd_build
+#build_openocd $DIR_ELF_OUTPUT
 
 #mkdir gdbproxy_build
 #build_gdbproxy $DIR_ELF_OUTPUT

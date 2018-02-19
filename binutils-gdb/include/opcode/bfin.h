@@ -1259,6 +1259,54 @@ typedef struct
   LoopSetup_code_bits,		LoopSetup_code_mask		\
 };
 
+/*  LDIMM
++---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+| 1 | 1 | 0 | 1 | 1 | 0 | 1 | 0 | 0 | 0 |.grp.......|.reg.......|
+|.imm[31:16]....................................................|
++---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+|.imm[15:0].....................................................|
++---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+|.dummy[15:0]...................................................|
++---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+*/
+
+typedef struct
+{
+  unsigned long long opcode;
+  int bits_dummy;
+  int mask_dummy;
+  int bits_imm;
+  int mask_imm;
+  int bits_reg;
+  int mask_reg;
+  int bits_grp;
+  int mask_grp;
+  int bits_code;
+  int mask_code;
+} LDIMM;
+
+#define LDIMM_opcode  ((unsigned long long)0xda00000000000000)
+#define LDIMM_dummy_bits 0
+#define LDIMM_dummy_mask 0xffff
+#define LDIMM_imm_bits  16
+#define LDIMM_imm_mask  0xffffffff
+#define LDIMM_reg_bits 48
+#define LDIMM_reg_mask 0x7
+#define LDIMM_grp_bits 51
+#define LDIMM_grp_mask 0x7
+#define LDIMM_code_bits 54
+#define LDIMM_code_mask 0x3ff
+
+#define init_LDIMM       \
+{           \
+  LDIMM_opcode, \
+  LDIMM_dummy_bits, LDIMM_dummy_mask, \
+  LDIMM_imm_bits, LDIMM_imm_mask, \
+  LDIMM_reg_bits, LDIMM_reg_mask, \
+  LDIMM_grp_bits, LDIMM_grp_mask, \
+  LDIMM_code_bits, LDIMM_code_mask \
+};
+
 /*  LDIMMhalf
 +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 1 |.Z.|.H.|.S.|.grp...|.reg.......|

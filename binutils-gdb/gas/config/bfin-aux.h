@@ -30,6 +30,7 @@ INSTR_T bfin_gen_dsp32alu (int, int, int, int, int, REG_T, REG_T, REG_T, REG_T);
 INSTR_T bfin_gen_dsp32shift (int, REG_T, REG_T, REG_T, int, int);
 INSTR_T bfin_gen_dsp32shiftimm (int, REG_T, int, REG_T, int, int);
 INSTR_T bfin_gen_ldimmhalf (REG_T, int, int, int, Expr_Node *, int);
+INSTR_T bfin_gen_ldimm (REG_T, Expr_Node *);
 INSTR_T bfin_gen_ldstidxi (REG_T, REG_T, int, int, int, Expr_Node *);
 INSTR_T bfin_gen_ldst (REG_T, REG_T, int, int, int, int);
 INSTR_T bfin_gen_ldstii (REG_T, REG_T, Expr_Node *, int, int);

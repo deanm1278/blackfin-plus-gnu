@@ -29,6 +29,8 @@
 #include "elf/common.h"
 #include "elf/bfin.h"
 
+//#define DEBUG
+
 extern int yyparse (void);
 struct yy_buffer_state;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
@@ -1167,10 +1169,21 @@ Expr_Node_Gen_Reloc_R (Expr_Node * head)
 #define ASSIGNF(x,f) c_code.opcode |= ((x & c_code.mask_##f)<<c_code.bits_##f)
 #define ASSIGN_R(x) c_code.opcode |= (((x ? (x->regno & CODE_MASK) : 0) & c_code.mask_##x)<<c_code.bits_##x)
 
+#define HI_64(x) (((unsigned long long)x >> 48) & 0xffff)
+#define HI_MID_64(x) (((unsigned long long)x >> 32) & 0xffff)
+#define LO_MID_64(x) (((unsigned long long)x >> 16) & 0xffff)
+#define LO_64(x) (((unsigned long long)x      ) & 0xffff)
+
 #define HI(x) ((x >> 16) & 0xffff)
 #define LO(x) ((x      ) & 0xffff)
 
 #define GROUP(x) ((x->regno & CLASS_MASK) >> 4)
+
+#define GEN_OPCODE64()  \
+  conscode (gencode (HI_64 (c_code.opcode)), \
+  conscode (gencode (HI_MID_64 (c_code.opcode)), \
+  conscode (gencode (LO_MID_64 (c_code.opcode)), \
+  conscode (gencode (LO (c_code.opcode)), NULL_CODE))))
 
 #define GEN_OPCODE32()  \
 	conscode (gencode (HI (c_code.opcode)), \
@@ -1365,6 +1378,24 @@ bfin_gen_linkage (int R, int framesize)
 
 
 /* Load and Store.  */
+
+INSTR_T
+bfin_gen_ldimm (REG_T reg, Expr_Node * pimm)
+{
+  int grp;
+  long int imm;
+  unsigned val = EXPR_VALUE (pimm);
+  INIT (LDIMM);
+
+  ASSIGN_R (reg);
+  grp = (GROUP (reg));
+  ASSIGN (grp);
+
+  imm = val;
+  ASSIGN (imm);
+
+  return GEN_OPCODE64 ();
+}
 
 INSTR_T
 bfin_gen_ldimmhalf (REG_T reg, int H, int S, int Z, Expr_Node * phword, int rel)
