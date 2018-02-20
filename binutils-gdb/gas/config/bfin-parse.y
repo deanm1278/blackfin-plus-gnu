@@ -1331,10 +1331,11 @@ asm_1:
     }
 	      else
 		{
-		  if (IS_CONST ($3) && !IS_UIMM ($3, 32))
-		    return yyerror ("Immediate value out of range");
+		  if (IS_CONST ($3))
+        $$ = LDIMM_R (&$1, $3);
 
-      $$ = LDIMM_R (&$1, $3);
+      else
+        return yyerror ("Could not load register");
 		}
 	    }
 	  else

@@ -11,10 +11,11 @@ DIR_LDR_UTILS_SOURCE=$(pwd)"/../ldr-utils"
 DIR_GDBPROXY_SOURCE=$(pwd)"/../bfin-gdbproxy"
 DIR_URJTAG_SOURCE=$(pwd)"/../urjtag"
 DIR_OPENOCD_SOURCE=$(pwd)"/../../openocd"
-MAKE="make"
+MAKE="make -j10"
 
 CBUILD= # the system we are compiling on
-CHOST="x86_64-w64-mingw32" # the system the final compiler will run on
+#CHOST="x86_64-w64-mingw32"
+CHOST= # the system the final compiler will run on
 
 CBUILD=$($DIR_APP/config.guess)
 BUILD_TARGET="--build=${CBUILD}"
