@@ -1323,19 +1323,9 @@ asm_1:
 		  notethat ("COMPI2opP: pregs = imm7 (x)\n");
 		  $$ = COMPI2OPP (&$1, imm7 ($3), 0);
 		}
-        else if (IS_CONST ($3) && IS_IMM ($3, 16))
-    {
-      notethat ("LDIMMhalf: regs = luimm16 (x)\n");
-      /* reg, H, S, Z.   */
-      $$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
-    }
 	      else
 		{
-		  if (IS_CONST ($3))
-        $$ = LDIMM_R (&$1, $3);
-
-      else
-        return yyerror ("Could not load register");
+      $$ = LDIMM_R (&$1, $3);
 		}
 	    }
 	  else

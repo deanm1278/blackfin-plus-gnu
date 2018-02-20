@@ -2618,6 +2618,34 @@ decode_LoopSetup_0 (TIword iw0, TIword iw1, bfd_vma pc, disassemble_info *outf)
 }
 
 static int
+decode_LDIMM_0 (TIword iw0, TIword iw1, TIword iw2, disassemble_info *outf)
+{
+  struct private *priv = outf->private_data;
+  /*  LDIMM
+  +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+  | 1 | 1 | 0 | 1 | 1 | 0 | 1 | 0 | 0 | 0 |.grp.......|.reg.......|
+  |.imm[31:16]....................................................|
+  +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+  |.imm[15:0].....................................................|
+  +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+  |.dummy[15:0]...................................................|
+  +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
+  */
+  int reg = ((iw0 >> (LDIMM_reg_bits - 48)) & LDIMM_reg_mask);
+  int grp = ((iw0 >> (LDIMM_grp_bits - 48)) & LDIMM_grp_mask);
+  int imm = (iw1 << 16) | iw2;
+
+  if (priv->parallel)
+    return 0;
+
+  OUTS (outf, regs (reg, grp));
+  OUTS (outf, "=");
+  OUTS (outf, imm32 (imm));
+
+  return 8;
+}
+
+static int
 decode_LDIMMhalf_0 (TIword iw0, TIword iw1, disassemble_info *outf)
 {
   struct private *priv = outf->private_data;
@@ -4650,6 +4678,7 @@ _print_insn_bfin (bfd_vma pc, disassemble_info *outf)
   struct private *priv = outf->private_data;
   TIword iw0;
   TIword iw1;
+  TIword iw2;
   int rv = 0;
 
   /* The PC must be 16-bit aligned.  */
@@ -4664,11 +4693,21 @@ _print_insn_bfin (bfd_vma pc, disassemble_info *outf)
     return -1;
   priv->iw0 = iw0;
 
+  if (((iw0 & 0xd000) == 0xd000) && ((iw0 & 0xff00) != 0xf800))
+    {
+      /* 64-bit insn.  */
+      if (ifetch (pc + 2, outf, &iw1))
+         return -1;
+      if (ifetch (pc + 4, outf, &iw2))
+         return -1;
+    }
+  else
+
   if (((iw0 & 0xc000) == 0xc000) && ((iw0 & 0xff00) != 0xf800))
     {
       /* 32-bit insn.  */
       if (ifetch (pc + 2, outf, &iw1))
-	return -1;
+	       return -1;
     }
   else
     /* 16-bit insn.  */
@@ -4734,6 +4773,8 @@ _print_insn_bfin (bfd_vma pc, disassemble_info *outf)
     rv = decode_LDSTii_0 (iw0, outf);
   else if ((iw0 & 0xff80) == 0xe080 && (iw1 & 0x0C00) == 0x0000)
     rv = decode_LoopSetup_0 (iw0, iw1, pc, outf);
+  else if ((iw0 & 0xff00) == 0xda00 && (iw1 & 0x0000) == 0x0000)
+    rv = decode_LDIMM_0 (iw0, iw1, iw2, outf);
   else if ((iw0 & 0xff00) == 0xe100 && (iw1 & 0x0000) == 0x0000)
     rv = decode_LDIMMhalf_0 (iw0, iw1, outf);
   else if ((iw0 & 0xfe00) == 0xe200 && (iw1 & 0x0000) == 0x0000)

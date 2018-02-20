@@ -1382,7 +1382,7 @@ bfin_gen_linkage (int R, int framesize)
 INSTR_T
 bfin_gen_ldimm (REG_T reg, Expr_Node * pimm)
 {
-  int grp;
+  long int grp;
   long int imm;
   unsigned val = EXPR_VALUE (pimm);
   INIT (LDIMM);
