@@ -3062,9 +3062,24 @@ decode_dsp32mult_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   int h00  = ((iw1 >> DSP32Mac_h00_bits) & DSP32Mac_h00_mask);
   int h11  = ((iw1 >> DSP32Mac_h11_bits) & DSP32Mac_h11_mask);
   int h01  = ((iw1 >> DSP32Mac_h01_bits) & DSP32Mac_h01_mask);
+  int op0  = ((iw1 >> DSP32Mac_op0_bits) & DSP32Mac_op0_mask);
 
   if (w1 == 0 && w0 == 0)
-    return 0;
+  {
+    //this is an a1:0 instruction
+    OUTS (outf, "(A1:0)");
+
+    if(op0 == 0)
+      OUTS (outf, " = ");
+    else if(op0 == 1)
+      OUTS (outf, " += ");
+    else if(op0 == 2)
+      OUTS (outf, " -= ");
+
+    OUTS(outf, dregs(src0));
+    OUTS(outf, " * ");
+    OUTS(outf, dregs(src1));
+  }
 
   if (((1 << mmod) & (P ? 0x313 : 0x1b57)) == 0)
     return 0;

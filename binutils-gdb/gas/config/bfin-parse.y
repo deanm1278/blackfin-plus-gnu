@@ -479,6 +479,7 @@ dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
 %token REG
 %token PC
 %token CCREG BYTE_DREG
+%token A_ONE_COLON_ZERO
 %token REG_A_DOUBLE_ZERO REG_A_DOUBLE_ONE
 %token A_ZERO_DOT_L A_ZERO_DOT_H A_ONE_DOT_L A_ONE_DOT_H
 %token HALF_REG
@@ -589,6 +590,8 @@ dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
 %type <macfunc> multiply_halfregs
 %type <macfunc> assign_macfunc
 %type <macfunc> a_macfunc
+%type <macfunc> a_full_macfunc
+%type <macfunc> multiply_regs
 %type <expr> expr_1
 %type <instr> asm_1
 %type <r0> vmod
@@ -1325,6 +1328,7 @@ asm_1:
 		}
 	      else
 		{
+      /* TODO: check that the immediate value is within range */
       $$ = LDIMM_R (&$1, $3);
 		}
 	    }
@@ -1922,6 +1926,15 @@ asm_1:
 			    IS_H ($3.s0), IS_H ($3.s1), IS_H ($8.s0), IS_H ($8.s1),
 			    &$1, 0, &$3.s0, &$3.s1, 1);
 	}
+
+  | a_full_macfunc opt_mode
+  {
+    notethat ("dsp32mult: a1:0 = multiply_regs opt_mode\n");
+
+    $$ = DSP32MULT (1, $2.MM, $2.mod, 0, 0,
+        0, 0, 0, 0,
+        0, $1.op, &$1.s0, &$1.s1, 0);
+  }
 
 
 /* SHIFTs.  */
@@ -4308,6 +4321,40 @@ a_macfunc:
 	}
 	;
 
+a_full_macfunc:
+  LPAREN A_ONE_COLON_ZERO RPAREN ASSIGN multiply_regs
+  {
+    $$.op = 0;
+    $$.s0 = $5.s0;
+    $$.s1 = $5.s1;
+  }
+  | LPAREN A_ONE_COLON_ZERO RPAREN _PLUS_ASSIGN multiply_regs
+  {
+    $$.op = 1;
+    $$.s0 = $5.s0;
+    $$.s1 = $5.s1;
+  }
+  | LPAREN A_ONE_COLON_ZERO RPAREN _MINUS_ASSIGN multiply_regs
+  {
+    $$.op = 2;
+    $$.s0 = $5.s0;
+    $$.s1 = $5.s1;
+  }
+  ;
+
+multiply_regs:
+  REG STAR REG
+  {
+    if (IS_DREG ($1) && IS_DREG ($3))
+      {
+        $$.s0 = $1;
+        $$.s1 = $3;
+      }
+    else
+      return yyerror ("Dregs expected");
+  }
+  ;
+
 multiply_halfregs:
 	HALF_REG STAR HALF_REG
 	{
@@ -4524,14 +4571,14 @@ value_match (Expr_Node *exp, int sz, int sign, int mul, int issigned)
       if (v >= min && v <= max) return 1;
 
 #ifdef DEBUG
-      fprintf(stderr, "signed value %lx out of range\n", v * mul);
+      fprintf(stderr, "signed value %x out of range\n", v * mul);
 #endif
       return 0;
     }
   if (v <= umax && v >= 0)
     return 1;
 #ifdef DEBUG
-  fprintf(stderr, "unsigned value %lx out of range\n", v * mul);
+  fprintf(stderr, "unsigned value %x out of range\n", v * mul);
 #endif
   return 0;
 }

@@ -233,6 +233,7 @@ int yylex (void);
 [aA]0"."[lL]    return A_ZERO_DOT_L;
 [aA]1"."[hH]    return A_ONE_DOT_H;
 [aA]0"."[hH]    return A_ZERO_DOT_H;
+[aA]1":"0       return A_ONE_COLON_ZERO;
 [aA][bB][sS]                            return ABS;
 [aA][bB][oO][rR][tT]                    return ABORT;
 [aA]1"."[xX]    _REG.regno = REG_A1x; return REG;
