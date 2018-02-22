@@ -775,7 +775,6 @@ asm_1:
 			 &$1.dst, op0, &$1.s0, &$1.s1, w0);
 	}
 
-
 /* VECTOR MACs.  */
 
 	| assign_macfunc opt_mode COMMA assign_macfunc opt_mode
@@ -1811,7 +1810,7 @@ asm_1:
 	  $$ = bfin_gen_cc2dreg (3, 0);
 	}
 
-/* DSPMULT.  */
+/* DSPMULT.  DSP32MULT(op1, MM, mmod, w1, P, h01, h11, h00, h10, dst, op0, src0, src1, w0) */
 
 	| HALF_REG ASSIGN multiply_halfregs opt_mode
 	{
@@ -1838,6 +1837,28 @@ asm_1:
 			      &$1, 0, &$3.s0, &$3.s1, 1);
 	    }
 	}
+
+  | REG ASSIGN multiply_regs opt_mode
+  {
+    /* TODO: check that these are still all valid */
+    /* Odd registers can use (M).  */
+    if (!IS_DREG ($1))
+      return yyerror ("Dreg expected");
+
+    if (IS_EVEN ($1) && $4.MM)
+      return yyerror ("(M) not allowed with MAC0");
+
+    if ($4.mod != 0 && $4.mod != M_FU && $4.mod != M_IS
+        && $4.mod != M_S2RND && $4.mod != M_ISS2)
+      return yyerror ("bad option");
+
+      notethat ("dsp32mult: dregs = multiply_regs (opt_mode)\n");
+
+      $$ = DSP32MULT (1, 1, $4.mod, 0, 0,
+          0, 0, 0, 0,
+          &$1, 0, &$3.s0, &$3.s1, 1);
+
+  }
 
 	| REG ASSIGN multiply_halfregs opt_mode
 	{

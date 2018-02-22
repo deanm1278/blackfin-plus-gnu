@@ -121,6 +121,9 @@ multiply16:
 multiply32:
 	R4 *= r0;
 	r7 *= R2;
+	/*
+	r3 = r4 * R5;
+	*/
 
 	.text
 	.global multiply_accumulate
@@ -139,9 +142,11 @@ multiply_accumulate:
 	a1 += R6.H * r1.L;
 	A1 -= r0.L * R3.H (is);
 	a1 -= r2.l * r7.h;
+	/*
 	(a1:0) = r3 * r5 (fu);
 	(a1:0) += r2 * r7;
 	(a1:0) -= r1 * r4;
+	*/
 
 	.text
 	.global multiply_accumulate_half
