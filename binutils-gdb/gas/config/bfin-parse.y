@@ -589,6 +589,7 @@ dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
 %type <reg> a_minusassign
 %type <macfunc> multiply_halfregs
 %type <macfunc> assign_macfunc
+%type <macfunc> assign_full_macfunc
 %type <macfunc> a_macfunc
 %type <macfunc> a_full_macfunc
 %type <macfunc> multiply_regs
@@ -1955,6 +1956,15 @@ asm_1:
     $$ = DSP32MULT (1, $2.MM, $2.mod, 0, 0,
         0, 0, 0, 0,
         0, $1.op, &$1.s0, &$1.s1, 0);
+  }
+
+  | assign_full_macfunc opt_mode
+  {
+    /* TODO: check macfunc full option */
+
+    notethat ("dsp32mult: assign_full_macfunc opt_mode\n");
+    $$ = DSP32MULT(1, $1.w, $2.mod, 0, $1.P, 
+        0, 0, 0, 0, &$1.dst, $1.op, &$1.s0, &$1.s1, 1);
   }
 
 
@@ -4318,6 +4328,63 @@ assign_macfunc:
 	}
 	;
 
+assign_full_macfunc:
+  REG ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
+  {
+    /* Rd = A1:0 */
+    $$.P = 0;
+    $$.op = 3;
+    $$.w = 0;
+    $$.dst = $1;
+    $$.s0.regno = 0;
+    $$.s1.regno = 0;
+  }
+
+  | LPAREN REG COLON REG RPAREN ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
+  {
+    /* Re:d = A1:0 */
+    $$.P = 1;
+    $$.op = 3;
+    $$.w = 0;
+    $$.dst = $2;
+    $$.s0.regno = 0;
+    $$.s1.regno = 0;
+  }
+
+  | LPAREN REG COLON REG RPAREN ASSIGN multiply_regs
+  {
+    /* (Re:d) = Rx * Ry */
+    $$.P = 1;
+    $$.op = 0;
+    $$.w = 1;
+    $$.dst = $2;
+    $$.s0 = $7.s0;
+    $$.s1 = $7.s1;
+  }
+
+  | REG ASSIGN LPAREN a_full_macfunc RPAREN
+  {
+    /* Rd = (A1:0 +-= Rx * Ry) */
+    $$.P = 0;
+    $$.op = $4.op;
+    $$.w = 0;
+    $$.dst = $1;
+    $$.s0 = $4.s0;
+    $$.s1 = $4.s1;
+  }
+
+  | LPAREN REG COLON REG RPAREN ASSIGN LPAREN a_full_macfunc RPAREN
+  {
+    /* Re:d = (A1:0 +-= Rx * Ry) */
+    $$.P = 1;
+    $$.op = $8.op;
+    $$.w = 0;
+    $$.dst = $2;
+    $$.s0 = $8.s0;
+    $$.s1 = $8.s1;
+  }
+  ;
+
 a_macfunc:
 	a_assign multiply_halfregs
 	{
@@ -4375,6 +4442,8 @@ multiply_regs:
       return yyerror ("Dregs expected");
   }
   ;
+
+
 
 multiply_halfregs:
 	HALF_REG STAR HALF_REG

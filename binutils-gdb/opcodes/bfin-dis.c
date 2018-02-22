@@ -3083,17 +3083,45 @@ decode_dsp32mult_0 (TIword iw0, TIword iw1, disassemble_info *outf)
       OUTS(outf, " * ");
       OUTS(outf, dregs(src1));
     }
-
-    if(w0){
+    else if(w0){
       if(P){
-
+        OUTS (outf, "(");
+        OUTS (outf, dregs(dst + 1));
+        OUTS (outf, ":");
+        OUTS (outf, dregs(dst));
+        OUTS (outf, ") = ");
       }
       else{
         OUTS (outf, dregs(dst));
         OUTS (outf, " = ");
+      }
+
+      if(MM){
         OUTS(outf, dregs(src0));
         OUTS(outf, " * ");
         OUTS(outf, dregs(src1));
+      }
+      else if(op0 == 3){
+        OUTS (outf, "(A1:0)");
+      }
+      else
+      {
+        OUTS (outf, "((A1:0)");
+        switch(op0){
+          case 0:
+            OUTS(outf, " = ");
+            break;
+          case 1:
+            OUTS (outf, " += ");
+            break;
+          case 2:
+            OUTS (outf, " -= ");
+            break;
+        }
+        OUTS(outf, dregs(src0));
+        OUTS(outf, " * ");
+        OUTS(outf, dregs(src1));
+        OUTS(outf, ")");
       }
     }
 
