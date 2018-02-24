@@ -1326,12 +1326,18 @@ asm_1:
 		  notethat ("COMPI2opP: pregs = imm7 (x)\n");
 		  $$ = COMPI2OPP (&$1, imm7 ($3), 0);
 		}
-	      else
+	      else if(IS_CONST ($3))
 		{
       /* TODO: check that the immediate value is within range */
       $$ = LDIMM_R (&$1, $3);
 		}
-	    }
+        else
+    {
+        notethat ("LDIMMhalf: regs = luimm16 (x)\n");
+        /* reg, H, S, Z.   */
+        $$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
+	  }
+    }
 	  else
 	    {
 	      /* (z) There is no 7 bit zero extended instruction.
