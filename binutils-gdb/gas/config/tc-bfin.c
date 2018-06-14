@@ -693,9 +693,11 @@ md_apply_fix (fixS *fixP, valueT *valueP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_BFIN_10_PCREL:
       if (!value)
 	break;
-      if (value < -1024 || value > 1022)
+      if (value < -1024 || value > 1022){
+        fprintf (stderr, "value: %li.\n", value);
 	as_bad_where (fixP->fx_file, fixP->fx_line,
                       _("pcrel too far BFD_RELOC_BFIN_10"));
+      }
 
       /* 11 bit offset even numbered, so we remove right bit.  */
       value = value >> 1;

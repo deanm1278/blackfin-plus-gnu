@@ -1316,27 +1316,36 @@ asm_1:
 	      /* 7 bit immediate value if possible.
 		 We will check for that constant value for efficiency
 		 If it goes to reloc, it will be 16 bit.  */
-	      if (IS_CONST ($3) && IS_IMM ($3, 7) && IS_DREG ($1))
-		{
-		  notethat ("COMPI2opD: dregs = imm7 (x) \n");
-		  $$ = COMPI2OPD (&$1, imm7 ($3), 0);
-		}
-	      else if (IS_CONST ($3) && IS_IMM ($3, 7) && IS_PREG ($1))
-		{
-		  notethat ("COMPI2opP: pregs = imm7 (x)\n");
-		  $$ = COMPI2OPP (&$1, imm7 ($3), 0);
-		}
-	      else if(IS_CONST ($3))
-		{
-      /* TODO: check that the immediate value is within range */
-      $$ = LDIMM_R (&$1, $3);
-		}
-        else
-    {
-        notethat ("LDIMMhalf: regs = luimm16 (x)\n");
-        /* reg, H, S, Z.   */
-        $$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
-	  }
+		if (IS_CONST ($3) && IS_IMM ($3, 7) && IS_DREG ($1))
+			{
+				notethat ("COMPI2opD: dregs = imm7 (x) \n");
+				$$ = COMPI2OPD (&$1, imm7 ($3), 0);
+			}
+		else if (IS_CONST ($3) && IS_IMM ($3, 7) && IS_PREG ($1))
+			{
+				notethat ("COMPI2opP: pregs = imm7 (x)\n");
+				$$ = COMPI2OPP (&$1, imm7 ($3), 0);
+			}
+		else if(IS_CONST ($3))
+			{
+				//halfreg if possible
+				if (IS_IMM ($3, 16)){
+					notethat ("LDIMMhalf: regs = luimm16 (x)\n");
+					/* reg, H, S, Z.   */
+					$$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
+				}
+				else {
+					/* TODO: check that the immediate value is within range */
+					//32 bit load
+					$$ = LDIMM_R (&$1, $3);
+				}
+			}
+			else
+			{
+					notethat ("LDIMMhalf: regs = luimm16 (x)\n");
+					/* reg, H, S, Z.   */
+					$$ = LDIMMHALF_R5 (&$1, 0, 1, 0, $3);
+			}
     }
 	  else
 	    {
