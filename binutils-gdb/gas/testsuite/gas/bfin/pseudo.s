@@ -63,31 +63,3 @@ debug:
 	DBG RETE;
 	DBG EMUDAT;
 
-	.global debug_assert
-debug_assert:
-
-	DBGA(R0.L, 0x0000);
-	DBGA(R0.H, 0x0010);
-	DBGA(R0.L, 0x0200);
-	DBGA(R0.H, 0x3000);
-
-	DBGA(R1.L, 0x0001);
-	DBGA(R1.H, 0x1001);
-	DBGA(R1.L, 0x8008);
-	DBGA(R1.H, 0xC000);
-
-	DBGA(R2.L, 1024);
-	DBGA(R2.H, 2048);
-	DBGA(R2.L, 4096);
-	DBGA(R2.H, 8192);
-
-	DBGA(R3.L, 65535);
-	DBGA(R3.H, 32767);
-	DBGA(R3.L, 16383);
-	DBGA(R3.H,  8191);
-
-	DBGA(P3.L, -1);
-	DBGA(P3.H, -100);
-	DBGA(P3.L, -1000);
-	DBGA(P3.H, -8191);
-

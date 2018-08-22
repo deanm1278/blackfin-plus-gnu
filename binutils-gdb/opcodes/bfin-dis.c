@@ -647,6 +647,42 @@ decode_optmode (int mod, int MM, disassemble_info *outf)
   OUTS (outf, ")");
 }
 
+static void
+decode_optmode32 (int mod, disassemble_info *outf)
+{
+  if (mod == 0)
+    return;
+
+  OUTS (outf, " (");
+
+  if (mod == M32_T)
+    OUTS (outf, "T");
+  else if (mod == M32_IS)
+    OUTS (outf, "IS");
+  else if (mod == M32_IS_NS)
+    OUTS (outf, "IS,NS");
+  else if (mod == M32_FU)
+    OUTS (outf, "FU");
+  else if (mod == M32_IU)
+    OUTS (outf, "IU");
+  else if (mod == M32_TFU)
+    OUTS (outf, "TFU");
+  else if (mod == M32_IU_NS)
+    OUTS (outf, "IU,NS");
+  else if (mod == M32_M)
+    OUTS (outf, "M");
+  else if (mod == M32_M_T)
+    OUTS (outf, "M,T");
+  else if (mod == M32_M_IS)
+    OUTS (outf, "M,IS");
+  else if (mod == M32_M_IS_NS)
+    OUTS (outf, "M,IS,NS");
+  else
+    abort ();
+
+  OUTS (outf, ")");
+}
+
 static struct saved_state
 {
   bu32 dpregs[16], iregs[4], mregs[4], bregs[4], lregs[4];
@@ -3066,7 +3102,7 @@ decode_dsp32mult_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   int op0  = ((iw1 >> DSP32Mac_op0_bits) & DSP32Mac_op0_mask);
 
   if(op1){
-
+    char buf[2];
     if (w1 == 0 && w0 == 0)
     {
       //this is an a1:0 instruction
@@ -3088,7 +3124,9 @@ decode_dsp32mult_0 (TIword iw0, TIword iw1, disassemble_info *outf)
         OUTS (outf, "(");
         OUTS (outf, dregs(dst + 1));
         OUTS (outf, ":");
-        OUTS (outf, dregs(dst));
+
+        sprintf (buf, "%i", (u_int8_t) (dst & 7));
+        OUTS (outf, buf);
         OUTS (outf, ") = ");
       }
       else{
@@ -3125,7 +3163,7 @@ decode_dsp32mult_0 (TIword iw0, TIword iw1, disassemble_info *outf)
       }
     }
 
-    decode_optmode (mmod, 0, outf);
+    decode_optmode32 (mmod, outf);
     return 4;
   }
   else{

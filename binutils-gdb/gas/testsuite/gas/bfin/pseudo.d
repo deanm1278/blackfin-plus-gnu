@@ -59,24 +59,3 @@ Disassembly of section .text:
   68:	3e f8       	DBG RETE;
   6a:	3f f8       	DBG EMUDAT;
 
-0000006c <debug_assert>:
-  6c:	00 f0 00 00 	DBGA \(R0.L, 0x0\);
-  70:	40 f0 10 00 	DBGA \(R0.H, 0x10\);
-  74:	00 f0 00 02 	DBGA \(R0.L, 0x200\);
-  78:	40 f0 00 30 	DBGA \(R0.H, 0x3000\);
-  7c:	01 f0 01 00 	DBGA \(R1.L, 0x1\);
-  80:	41 f0 01 10 	DBGA \(R1.H, 0x1001\);
-  84:	01 f0 08 80 	DBGA \(R1.L, 0x8008\);
-  88:	41 f0 00 c0 	DBGA \(R1.H, 0xc000\);
-  8c:	02 f0 00 04 	DBGA \(R2.L, 0x400\);
-  90:	42 f0 00 08 	DBGA \(R2.H, 0x800\);
-  94:	02 f0 00 10 	DBGA \(R2.L, 0x1000\);
-  98:	42 f0 00 20 	DBGA \(R2.H, 0x2000\);
-  9c:	03 f0 ff ff 	DBGA \(R3.L, 0xffff\);
-  a0:	43 f0 ff 7f 	DBGA \(R3.H, 0x7fff\);
-  a4:	03 f0 ff 3f 	DBGA \(R3.L, 0x3fff\);
-  a8:	43 f0 ff 1f 	DBGA \(R3.H, 0x1fff\);
-  ac:	0b f0 ff ff 	DBGA \(P3.L, 0xffff\);
-  b0:	4b f0 9c ff 	DBGA \(P3.H, 0xff9c\);
-  b4:	0b f0 18 fc 	DBGA \(P3.L, 0xfc18\);
-  b8:	4b f0 01 e0 	DBGA \(P3.H, 0xe001\);

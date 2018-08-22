@@ -41,6 +41,19 @@
 #define M_IH    11
 #define M_IU    12
 
+#define M32_NS 1
+#define M32_T 1
+#define M32_IS  2
+#define M32_IS_NS 3
+#define M32_FU 4
+#define M32_TFU 5
+#define M32_IU 6
+#define M32_IU_NS 7
+#define M32_M 8
+#define M32_M_T 9
+#define M32_M_IS 10
+#define M32_M_IS_NS 11
+
 static inline int is_macmod_pmove (int x)
 {
   return (x == 0) || (x == M_IS) || (x == M_FU) || (x == M_S2RND)

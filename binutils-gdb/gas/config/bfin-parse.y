@@ -236,7 +236,8 @@ valid_dreg_pair (Register *reg1, Expr_Node *reg2)
       return 0;
     }
 
-  if (reg1->regno != 1 && reg1->regno != 3)
+  if (reg1->regno != 1 && reg1->regno != 3
+		 && reg1->regno != 5 && reg1->regno != 7 )
     {
       yyerror ("Bad register pair");
       return 0;
@@ -329,6 +330,42 @@ check_assign_full_macfunc_option (Macfunc *a, Opt_mode *opt)
 		return -1;
 
   return 0;
+}
+
+static int
+m_to_m32(Opt_mode *opt)
+{
+		if(opt->mod == 0 && opt->MM == 0)
+			return 0;
+
+		if(opt->MM == 0){
+			if(opt->mod == M_T)
+				return M32_T;
+			else if(opt->mod == M_IS && opt->ns == 1)
+				return M32_IS_NS;
+			else if(opt->mod == M_IS)
+				return M32_IS;
+			else if(opt->mod == M_FU)
+				return M32_FU;
+			else if(opt->mod == M_TFU)
+				return M32_TFU;
+			else if(opt->mod == M_IU && opt->ns == 1)
+				return M32_IU_NS;
+			else if(opt->mod == M_IU)
+				return M32_IU;
+		}
+		else if(opt->MM == 1){
+			if(opt->mod == M_IS && opt->ns == 1)
+				return M32_M_IS_NS;
+			else if(opt->mod == M_IS)
+				return M32_M_IS;
+			else if(opt->mod == M_T)
+				return M32_M_T;
+			else if(opt->mod == 0)
+				return M32_M;
+		}
+
+		return yyerror("invalid option");
 }
 
 /* Check (vector) mac funcs and ops.  */
@@ -1901,21 +1938,13 @@ asm_1:
 
   | REG ASSIGN multiply_regs opt_mode
   {
-    /* TODO: check that these are still all valid */
     /* Odd registers can use (M).  */
     if (!IS_DREG ($1))
       return yyerror ("Dreg expected");
 
-    if (IS_EVEN ($1) && $4.MM)
-      return yyerror ("(M) not allowed with MAC0");
-
-    if ($4.mod != 0 && $4.mod != M_FU && $4.mod != M_IS
-        && $4.mod != M_S2RND && $4.mod != M_ISS2)
-      return yyerror ("bad option");
-
       notethat ("dsp32mult: dregs = multiply_regs (opt_mode)\n");
 
-      $$ = DSP32MULT (1, 1, $4.mod, 0, 0,
+      $$ = DSP32MULT (1, 1, m_to_m32(&$4), 0, 0,
           0, 0, 0, 0,
           &$1, 0, &$3.s0, &$3.s1, 1);
 
@@ -2016,7 +2045,7 @@ asm_1:
 
     notethat ("dsp32mult: a1:0 = multiply_regs opt_mode\n");
 
-    $$ = DSP32MULT (1, 0, $2.mod, 0, 0,
+    $$ = DSP32MULT (1, 0, m_to_m32(&$2), 0, 0,
         0, 0, 0, 0,
         0, $1.op, &$1.s0, &$1.s1, 0);
   }
@@ -2027,7 +2056,7 @@ asm_1:
 			return yyerror("invalid option");
 
     notethat ("dsp32mult: assign_full_macfunc opt_mode\n");
-    $$ = DSP32MULT(1, $1.MM, $2.mod, 0, $1.P, 
+    $$ = DSP32MULT(1, $1.MM, m_to_m32(&$2), 0, $1.P, 
         0, 0, 0, 0, &$1.dst, $1.op, &$1.s0, &$1.s1, 1);
   }
 
