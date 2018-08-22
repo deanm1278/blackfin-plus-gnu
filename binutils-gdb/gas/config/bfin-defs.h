@@ -352,6 +352,7 @@ typedef struct _macfunc
   char op;
   char w;
   char P;
+  char MM;
   Register dst;
   Register s0;
   Register s1;
@@ -361,6 +362,7 @@ typedef struct _opt_mode
 {
   int MM;
   int mod;
+  int ns;
 } Opt_mode;
 
 typedef enum

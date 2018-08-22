@@ -286,6 +286,51 @@ check_macfunc_option (Macfunc *a, Opt_mode *opt)
   return 0;
 }
 
+static int
+check_full_macfunc_option (Opt_mode *opt)
+{
+  /* Default option is always valid.  */
+  if (opt->mod == 0)
+    return 0;
+
+	if (opt->MM == 1 && (opt->mod != M_T && opt->mod != M_IS))
+		return -1;
+
+	if (opt->ns == 1 && (opt->mod != M_IU && opt->mod != M_IS))
+		return -1;
+
+	if (opt->MM == 0 && (opt->mod != M_T && opt->mod != M_IS
+											&& opt->mod != M_FU && opt->mod != M_TFU 
+											&& opt->mod != M_IU))
+		return -1;
+
+  return 0;
+}
+
+static int
+check_assign_full_macfunc_option (Macfunc *a, Opt_mode *opt)
+{
+	if( a->MM == 1 && opt->mod == 0)
+		return 0;
+
+  /* fractional rounding cannot be used here   */
+  if (opt->mod == 0 || opt->mod == M_FU)
+    return -1;
+
+	if (opt->MM == 1 && (opt->mod != M_T && opt->mod != M_IS))
+		return -1;
+
+	if (opt->ns == 1 && (opt->mod != M_IU && opt->mod != M_IS))
+		return -1;
+
+	if (opt->MM == 0 && (opt->mod != M_T && opt->mod != M_IS
+											&& opt->mod != M_FU && opt->mod != M_TFU 
+											&& opt->mod != M_IU))
+		return -1;
+
+  return 0;
+}
+
 /* Check (vector) mac funcs and ops.  */
 
 static int
@@ -1966,19 +2011,23 @@ asm_1:
 
   | a_full_macfunc opt_mode
   {
+		if (check_full_macfunc_option(&$2) < 0)
+			return yyerror("invalid option");
+
     notethat ("dsp32mult: a1:0 = multiply_regs opt_mode\n");
 
-    $$ = DSP32MULT (1, $2.MM, $2.mod, 0, 0,
+    $$ = DSP32MULT (1, 0, $2.mod, 0, 0,
         0, 0, 0, 0,
         0, $1.op, &$1.s0, &$1.s1, 0);
   }
 
   | assign_full_macfunc opt_mode
   {
-    /* TODO: check macfunc full option */
+		if (check_assign_full_macfunc_option(&$1, &$2) < 0)
+			return yyerror("invalid option");
 
     notethat ("dsp32mult: assign_full_macfunc opt_mode\n");
-    $$ = DSP32MULT(1, $1.w, $2.mod, 0, $1.P, 
+    $$ = DSP32MULT(1, $1.MM, $2.mod, 0, $1.P, 
         0, 0, 0, 0, &$1.dst, $1.op, &$1.s0, &$1.s1, 1);
   }
 
@@ -3784,6 +3833,7 @@ opt_mode:
 	{
 	$$.MM = 0;
 	$$.mod = 0;
+	$$.ns = 0;
 	}
 	| LPAREN M COMMA MMOD RPAREN
 	{
@@ -3795,10 +3845,28 @@ opt_mode:
 	$$.MM = 1;
 	$$.mod = $2;
 	}
+	| LPAREN M COMMA MMOD COMMA NS RPAREN
+	{
+	$$.MM = 1;
+	$$.mod = $4;
+	$$.ns = 1;
+	}
+	| LPAREN MMOD COMMA M COMMA NS RPAREN
+	{
+	$$.MM = 1;
+	$$.mod = $2;
+	$$.ns = 1;
+	}
 	| LPAREN MMOD RPAREN
 	{
 	$$.MM = 0;
 	$$.mod = $2;
+	}
+	| LPAREN MMOD COMMA NS RPAREN
+	{
+	$$.MM = 0;
+	$$.mod = $2;
+	$$.ns = 1;
 	}
 	| LPAREN M RPAREN
 	{
@@ -4344,7 +4412,10 @@ assign_macfunc:
 	;
 
 assign_full_macfunc:
-  REG ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
+	{
+  $$.MM = 0;
+	}
+  | REG ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
   {
     /* Rd = A1:0 */
     $$.P = 0;
@@ -4355,8 +4426,11 @@ assign_full_macfunc:
     $$.s1.regno = 0;
   }
 
-  | LPAREN REG COLON REG RPAREN ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
+  | LPAREN REG COLON expr RPAREN ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
   {
+		if ( !valid_dreg_pair( &$2, $4 ) )
+			return yyerror ("invalid register pair");
+
     /* Re:d = A1:0 */
     $$.P = 1;
     $$.op = 3;
@@ -4366,8 +4440,11 @@ assign_full_macfunc:
     $$.s1.regno = 0;
   }
 
-  | LPAREN REG COLON REG RPAREN ASSIGN multiply_regs
+  | LPAREN REG COLON expr RPAREN ASSIGN multiply_regs
   {
+		if ( !valid_dreg_pair( &$2, $4 ) )
+			return yyerror ("invalid register pair");
+
     /* (Re:d) = Rx * Ry */
     $$.P = 1;
     $$.op = 0;
@@ -4375,6 +4452,7 @@ assign_full_macfunc:
     $$.dst = $2;
     $$.s0 = $7.s0;
     $$.s1 = $7.s1;
+		$$.MM = 1;
   }
 
   | REG ASSIGN LPAREN a_full_macfunc RPAREN
@@ -4388,8 +4466,11 @@ assign_full_macfunc:
     $$.s1 = $4.s1;
   }
 
-  | LPAREN REG COLON REG RPAREN ASSIGN LPAREN a_full_macfunc RPAREN
+  | LPAREN REG COLON expr RPAREN ASSIGN LPAREN a_full_macfunc RPAREN
   {
+		if ( !valid_dreg_pair( &$2, $4 ) )
+			return yyerror ("invalid register pair");
+
     /* Re:d = (A1:0 +-= Rx * Ry) */
     $$.P = 1;
     $$.op = $8.op;
