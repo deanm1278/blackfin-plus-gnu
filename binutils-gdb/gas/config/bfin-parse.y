@@ -288,6 +288,22 @@ check_macfunc_option (Macfunc *a, Opt_mode *opt)
 }
 
 static int
+check_cmplx_macfunc_option (Macfunc *a, Opt_mode *opt)
+{
+  /* Default option is always valid.  */
+  if (opt->mod == 0)
+    return 0;
+
+	if(a->w && !a->P && (opt->mod != M_T && opt->mod != M_IS ))
+		return -1;
+
+	else if(!(a->w && !a->P) && (opt->mod != M_IS))
+		return -1;
+
+	return 0;
+}
+
+static int
 check_full_macfunc_option (Opt_mode *opt)
 {
   /* Default option is always valid.  */
@@ -366,6 +382,19 @@ m_to_m32(Opt_mode *opt)
 		}
 
 		return yyerror("invalid option");
+}
+
+static int
+m_to_cmode(Opt_mode *opt)
+{
+	if(opt->mod == 0)
+		return CMODE_DEFAULT;
+	else if(opt->mod == M_T)
+		return CMODE_T;
+	else if(opt->mod == M_IS)
+		return CMODE_IS;
+
+	return yyerror("invalid cmode option");
 }
 
 /* Check (vector) mac funcs and ops.  */
@@ -594,7 +623,7 @@ dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
 
 %token MINUS PLUS STAR SLASH
 %token NEG
-%token MIN MAX ABS
+%token MIN MAX ABS CMUL
 %token DOUBLE_BAR
 %token _PLUS_BAR_PLUS _PLUS_BAR_MINUS _MINUS_BAR_PLUS _MINUS_BAR_MINUS
 %token _MINUS_MINUS _PLUS_PLUS
@@ -675,6 +704,9 @@ dsp32shiftimm in slot1 and P-reg Store in slot2 Not Supported");
 %type <macfunc> a_macfunc
 %type <macfunc> a_full_macfunc
 %type <macfunc> multiply_regs
+%type <macfunc> a_cmplx_macfunc
+%type <macfunc> assign_cmplx_macfunc
+%type <macfunc> cmplxop
 %type <expr> expr_1
 %type <instr> asm_1
 %type <r0> vmod
@@ -2059,6 +2091,26 @@ asm_1:
     $$ = DSP32MULT(1, $1.MM, m_to_m32(&$2), 0, $1.P, 
         0, 0, 0, 0, &$1.dst, $1.op, &$1.s0, &$1.s1, 1);
   }
+
+/* Complex multiplication */
+| a_cmplx_macfunc opt_mode
+{
+	if (check_cmplx_macfunc_option(&$1, &$2) < 0)
+			return yyerror("invalid option");
+	
+	notethat ("dsp32mac: cmplx_macfunc opt_mode\n");
+	$$ = DSP32MAC($1.op1, 0, m_to_cmode(&$2), 0, $1.P, 
+        0, 0, 0, 0, &$1.dst, $1.op, &$1.s0, &$1.s1, $1.w);
+}
+| assign_cmplx_macfunc opt_mode
+{
+	if (check_cmplx_macfunc_option(&$1, &$2) < 0)
+			return yyerror("invalid option");
+	
+	notethat ("dsp32mac: cmplx_macfunc opt_mode\n");
+	$$ = DSP32MAC($1.op1, 0, m_to_cmode(&$2), 0, $1.P, 
+        0, 0, 0, 0, &$1.dst, $1.op, &$1.s0, &$1.s1, $1.w);
+}
 
 
 /* SHIFTs.  */
@@ -4375,6 +4427,45 @@ a_plusassign:
 	}
 	;
 
+cmplxop:
+	CMUL LPAREN REG COMMA REG RPAREN
+	{
+		if (IS_DREG ($3) && IS_DREG ($5))
+		{
+			$$.s0 = $3;
+			$$.s1 = $5;
+		}
+    else
+      return yyerror ("Dregs expected");
+
+		$$.op1 = 0;
+	}
+	| CMUL LPAREN REG COMMA REG STAR RPAREN
+	{
+		if (IS_DREG ($3) && IS_DREG ($5))
+		{
+			$$.s0 = $3;
+			$$.s1 = $5;
+		}
+    else
+      return yyerror ("Dregs expected");
+
+		$$.op1 = 1;
+	}
+	| CMUL LPAREN REG STAR COMMA REG STAR RPAREN
+	{
+		if (IS_DREG ($3) && IS_DREG ($6))
+		{
+			$$.s0 = $3;
+			$$.s1 = $6;
+		}
+    else
+      return yyerror ("Dregs expected");
+
+		$$.op1 = 2;
+	}
+	;
+
 assign_macfunc:
 	REG ASSIGN REG_A
 	{
@@ -4440,11 +4531,57 @@ assign_macfunc:
 	}
 	;
 
-assign_full_macfunc:
+assign_cmplx_macfunc:
+	REG ASSIGN LPAREN a_cmplx_macfunc RPAREN
 	{
-  $$.MM = 0;
+		$$.w = 1;
+		$$.P = 0;
+		$$.op = $4.op;
+		$$.op1 = $4.op1;
+		$$.dst = $1;
+		$$.s0 = $4.s0;
+		$$.s1 = $4.s1;
 	}
-  | REG ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
+	| REG ASSIGN cmplxop
+	{
+		$$.w = 1;
+		$$.P = 0;
+		$$.op = 3;
+		$$.op1 = $3.op1;
+		$$.dst = $1;
+		$$.s0 = $3.s0;
+		$$.s1 = $3.s1;
+	}
+	| LPAREN REG COLON expr RPAREN ASSIGN LPAREN a_cmplx_macfunc RPAREN
+	{
+		if ( !valid_dreg_pair( &$2, $4 ) )
+			return yyerror ("invalid register pair");
+
+		$$.w = 1;
+		$$.P = 1;
+		$$.op = $8.op;
+		$$.op1 = $8.op1;
+		$$.dst = $2;
+		$$.s0 = $8.s0;
+		$$.s1 = $8.s1;
+	}
+	| LPAREN REG COLON expr RPAREN ASSIGN cmplxop
+	{
+		if ( !valid_dreg_pair( &$2, $4 ) )
+			return yyerror ("invalid register pair");
+
+		$$.w = 1;
+		$$.P = 1;
+		$$.op = 3;
+		$$.op1 = $7.op1;
+		$$.dst = $2;
+		$$.s0 = $7.s0;
+		$$.s1 = $7.s1;
+	}
+	;
+
+assign_full_macfunc:
+	REG ASSIGN LPAREN A_ONE_COLON_ZERO RPAREN
   {
     /* Rd = A1:0 */
     $$.P = 0;
@@ -4550,6 +4687,30 @@ a_full_macfunc:
   | LPAREN A_ONE_COLON_ZERO RPAREN _MINUS_ASSIGN multiply_regs
   {
     $$.op = 2;
+    $$.s0 = $5.s0;
+    $$.s1 = $5.s1;
+  }
+  ;
+
+	a_cmplx_macfunc:
+  LPAREN A_ONE_COLON_ZERO RPAREN ASSIGN cmplxop
+  {
+    $$.op = 0;
+		$$.op1 = $5.op1;
+    $$.s0 = $5.s0;
+    $$.s1 = $5.s1;
+  }
+  | LPAREN A_ONE_COLON_ZERO RPAREN _PLUS_ASSIGN cmplxop
+  {
+    $$.op = 1;
+		$$.op1 = $5.op1;
+    $$.s0 = $5.s0;
+    $$.s1 = $5.s1;
+  }
+  | LPAREN A_ONE_COLON_ZERO RPAREN _MINUS_ASSIGN cmplxop
+  {
+    $$.op = 2;
+		$$.op1 = $5.op1;
     $$.s0 = $5.s0;
     $$.s1 = $5.s1;
   }

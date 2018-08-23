@@ -606,6 +606,41 @@ decode_macfunc (int which, int op, int h0, int h1, int src0, int src1, disassemb
   return 0;
 }
 
+static int decode_cmplxop(int op1, int src0, int src1, disassemble_info *outf)
+{
+  OUTS (outf, "CMUL(");
+  OUTS (outf, dregs(src0));
+  if(op1 == 2)
+    OUTS (outf, "*");
+  OUTS (outf, ",");
+
+  OUTS (outf, dregs(src1));
+  if(op1 > 0)
+    OUTS (outf, "*");
+
+  OUTS (outf, ")");
+  return 0;
+}
+
+static int decode_cmplx_macfunc(int op0, int op1, int src0, int src1, disassemble_info *outf)
+{
+  const char *sop = "<unknown op>";
+
+  switch (op0)
+  {
+    case 0: sop = "(A1:0) = "; break;
+    case 1: sop = "(A1:0) += "; break;
+    case 2: sop = "(A1:0) -= "; break;
+    case 3: sop = ""; break;
+    default: break;
+  }
+
+  OUTS (outf, sop);
+  decode_cmplxop(op1, src0, src1, outf);
+
+  return 0;
+}
+
 static void
 decode_optmode (int mod, int MM, disassemble_info *outf)
 {
@@ -677,6 +712,24 @@ decode_optmode32 (int mod, disassemble_info *outf)
     OUTS (outf, "M,IS");
   else if (mod == M32_M_IS_NS)
     OUTS (outf, "M,IS,NS");
+  else
+    abort ();
+
+  OUTS (outf, ")");
+}
+
+static void
+decode_cmode (int mod, disassemble_info *outf)
+{
+  if (mod == CMODE_DEFAULT)
+    return;
+
+  OUTS (outf, " (");
+
+  if (mod == CMODE_T)
+    OUTS (outf, "T");
+  else if (mod == CMODE_IS)
+    OUTS (outf, "IS");
   else
     abort ();
 
@@ -3016,64 +3069,97 @@ decode_dsp32mac_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   int h11  = ((iw1 >> DSP32Mac_h11_bits) & DSP32Mac_h11_mask);
   int h01  = ((iw1 >> DSP32Mac_h01_bits) & DSP32Mac_h01_mask);
 
-  if (w0 == 0 && w1 == 0 && op1 == 3 && op0 == 3)
-    return 0;
+  if(mmod > 12){
+    //this is a complex mac
+    if (w0) {
+      if(P){
+        char buf[2];
+        OUTS (outf, "(");
+        OUTS (outf, dregs(dst + 1));
+        OUTS (outf, ":");
 
-  if (op1 == 3 && MM)
-    return 0;
+        sprintf (buf, "%i", (u_int8_t) (dst & 7));
+        OUTS (outf, buf);
+        OUTS (outf, ") = ");
+      }
+      else {
+        OUTS (outf, dregs(dst));
+        OUTS (outf, " = ");
+      }
+      
+      if(op0 < 3){
+        OUTS (outf, "(");
+        decode_cmplx_macfunc(op0, op1, src0, src1, outf);
+        OUTS (outf, ")");
+      }
+      else
+        decode_cmplx_macfunc(op0, op1, src0, src1, outf);
+    }
+    else
+      decode_cmplx_macfunc(op0, op1, src0, src1, outf);
+    
+    decode_cmode(mmod, outf);
+  }
+  else{
+    if (w0 == 0 && w1 == 0 && op1 == 3 && op0 == 3)
+      return 0;
 
-  if ((w1 || w0) && mmod == M_W32)
-    return 0;
+    if (op1 == 3 && MM)
+      return 0;
 
-  if (((1 << mmod) & (P ? 0x131b : 0x1b5f)) == 0)
-    return 0;
+    if ((w1 || w0) && mmod == M_W32)
+      return 0;
 
-  if (w1 == 1 || op1 != 3)
+    if (((1 << mmod) & (P ? 0x131b : 0x1b5f)) == 0)
+      return 0;
+
+    if (w1 == 1 || op1 != 3)
+      {
+        if (w1)
+    OUTS (outf, P ? dregs (dst + 1) : dregs_hi (dst));
+
+        if (op1 == 3)
+    OUTS (outf, " = A1");
+        else
     {
       if (w1)
-	OUTS (outf, P ? dregs (dst + 1) : dregs_hi (dst));
-
-      if (op1 == 3)
-	OUTS (outf, " = A1");
-      else
-	{
-	  if (w1)
-	    OUTS (outf, " = (");
-	  decode_macfunc (1, op1, h01, h11, src0, src1, outf);
-	  if (w1)
-	    OUTS (outf, ")");
-	}
-
-      if (w0 == 1 || op0 != 3)
-	{
-	  if (MM)
-	    OUTS (outf, " (M)");
-	  OUTS (outf, ", ");
-	}
+        OUTS (outf, " = (");
+      decode_macfunc (1, op1, h01, h11, src0, src1, outf);
+      if (w1)
+        OUTS (outf, ")");
     }
 
-  if (w0 == 1 || op0 != 3)
+        if (w0 == 1 || op0 != 3)
     {
-      /* Clear MM option since it only matters for MAC1, and if we made
-         it this far, we've already shown it or we want to ignore it.  */
-      MM = 0;
-
-      if (w0)
-	OUTS (outf, P ? dregs (dst) : dregs_lo (dst));
-
-      if (op0 == 3)
-	OUTS (outf, " = A0");
-      else
-	{
-	  if (w0)
-	    OUTS (outf, " = (");
-	  decode_macfunc (0, op0, h00, h10, src0, src1, outf);
-	  if (w0)
-	    OUTS (outf, ")");
-	}
+      if (MM)
+        OUTS (outf, " (M)");
+      OUTS (outf, ", ");
     }
+      }
 
-  decode_optmode (mmod, MM, outf);
+    if (w0 == 1 || op0 != 3)
+      {
+        /* Clear MM option since it only matters for MAC1, and if we made
+          it this far, we've already shown it or we want to ignore it.  */
+        MM = 0;
+
+        if (w0)
+    OUTS (outf, P ? dregs (dst) : dregs_lo (dst));
+
+        if (op0 == 3)
+    OUTS (outf, " = A0");
+        else
+    {
+      if (w0)
+        OUTS (outf, " = (");
+      decode_macfunc (0, op0, h00, h10, src0, src1, outf);
+      if (w0)
+        OUTS (outf, ")");
+    }
+      }
+
+    decode_optmode (mmod, MM, outf);
+  }
 
   return 4;
 }

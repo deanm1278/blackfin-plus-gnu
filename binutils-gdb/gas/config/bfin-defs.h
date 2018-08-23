@@ -350,6 +350,7 @@ typedef struct _macfunc
 {
   char n;
   char op;
+  char op1;
   char w;
   char P;
   char MM;

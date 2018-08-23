@@ -54,6 +54,10 @@
 #define M32_M_IS 10
 #define M32_M_IS_NS 11
 
+#define CMODE_DEFAULT 13
+#define CMODE_T 14
+#define CMODE_IS 15
+
 static inline int is_macmod_pmove (int x)
 {
   return (x == 0) || (x == M_IS) || (x == M_FU) || (x == M_S2RND)

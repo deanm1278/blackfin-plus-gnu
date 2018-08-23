@@ -181,6 +181,7 @@ int yylex (void);
 [cC][yY][cC][lL][eE][sS]  { _REG.regno = REG_CYCLES; return REG; }
 [cC][sS][yY][nN][cC]                    return CSYNC;
 [cC][oO]                                return CO;
+[cC][mM][uU][lL]                        return CMUL;
 [cC][lL][iI]                            return CLI;
 
 [cC][cC]     _REG.regno = REG_CC; return CCREG;
