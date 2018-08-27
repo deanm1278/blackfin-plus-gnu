@@ -178,3 +178,9 @@ Disassembly of section .text:
 000001cc <subtract_immediate>:
  1cc:	66 9f       	I2 -= 0x2;.*
  1ce:	6c 9f       	I0 -= 0x4;.*
+
+000001d0 <mvdregtoaxdual>:
+ 1d0:	30 c4 3d d0 	A1 = R5 \(X\), A0 = R7 \(Z\);
+ 1d4:	30 c4 3d c0 	A1 = R5 \(X\), A0 = R7 \(X\);
+ 1d8:	30 c4 3d f0 	A1 = R5 \(Z\), A0 = R7 \(Z\);
+ 1dc:	30 c4 3d e0 	A1 = R5 \(Z\), A0 = R7 \(X\);

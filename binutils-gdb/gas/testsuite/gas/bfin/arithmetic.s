@@ -232,3 +232,10 @@ subtract_immediate:
 	I2 -= 2;
 	i0 -= 4;
 
+	.text
+	.global mvdregtoaxdual
+mvdregtoaxdual:
+    A1 = R5 (X), A0 = R7 (Z);
+    A1 = R5 (X), A0 = R7 (X);
+    A1 = R5 (Z), A0 = R7 (Z);
+    A1 = R5 (Z), A0 = R7 (X);

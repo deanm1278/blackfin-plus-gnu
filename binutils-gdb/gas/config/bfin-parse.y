@@ -1527,6 +1527,16 @@ asm_1:
 	    return yyerror ("Register mismatch");
 	}
 
+	| a_assign REG xpmod1 COMMA a_assign REG xpmod1
+	{
+		if ( IS_DREG ($2) && IS_DREG ($6) && $1.regno == REG_A1 && $5.regno == REG_A0){
+			notethat ("dsp32alu: A1 = dregs smode, A0 = dregs xmode\n");
+			$$ = DSP32ALU (16, 1, 0, 0, &$6, &$2, $3.r0, $7.r0, 3);
+		}
+		else
+			return yyerror ("Register mismatch");
+	}
+
 	| a_assign MINUS REG_A COMMA a_assign MINUS REG_A
 	{
 	  if (REG_SAME ($1, $3) && REG_SAME ($5, $7) && !REG_SAME ($1, $5))

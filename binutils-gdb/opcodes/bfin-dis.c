@@ -3656,6 +3656,22 @@ decode_dsp32alu_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   else if (aop == 3 && HL == 0 && aopcde == 16)
     OUTS (outf, "A1 = ABS A1, A0 = ABS A0");
 
+  else if (aop == 3 && HL == 1 && aopcde == 16)
+  {
+    OUTS (outf, "A1 = ");
+    OUTS (outf, dregs (src1));
+    if(s)
+      OUTS (outf, " (Z), A0 = ");
+    else
+      OUTS (outf, " (X), A0 = ");
+
+    OUTS (outf, dregs (src0));
+    if(x)
+      OUTS (outf, " (Z)");
+    else
+      OUTS (outf, " (X)");
+  }
+
   else if (aop == 0 && aopcde == 23 && HL == 1)
     {
       OUTS (outf, dregs (dst0));
