@@ -3078,7 +3078,7 @@ decode_dsp32mac_0 (TIword iw0, TIword iw1, disassemble_info *outf)
         OUTS (outf, dregs(dst + 1));
         OUTS (outf, ":");
 
-        sprintf (buf, "%i", (u_int8_t) (dst & 7));
+        sprintf (buf, "%i", (dst & 7));
         OUTS (outf, buf);
         OUTS (outf, ") = ");
       }
@@ -3211,7 +3211,7 @@ decode_dsp32mult_0 (TIword iw0, TIword iw1, disassemble_info *outf)
         OUTS (outf, dregs(dst + 1));
         OUTS (outf, ":");
 
-        sprintf (buf, "%i", (u_int8_t) (dst & 7));
+        sprintf (buf, "%i", (dst & 7));
         OUTS (outf, buf);
         OUTS (outf, ") = ");
       }
