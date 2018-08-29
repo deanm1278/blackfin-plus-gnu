@@ -11,7 +11,7 @@ DIR_LDR_UTILS_SOURCE=$(pwd)"/../ldr-utils"
 DIR_GDBPROXY_SOURCE=$(pwd)"/../bfin-gdbproxy"
 DIR_URJTAG_SOURCE=$(pwd)"/../urjtag"
 DIR_OPENOCD_SOURCE=$(pwd)"/../../openocd"
-MAKE="make -j4"
+MAKE="make -j10"
 
 CBUILD= # the system we are compiling on
 #CHOST="x86_64-w64-mingw32"
@@ -65,6 +65,7 @@ build_gcc()
 		--enable-languages=c,c++ \
 		--enable-clocale=generic \
 		--disable-werror --with-newlib \
+		--disable-nls \
 		--disable-symvers --disable-libssp --disable-libffi --disable-libgcj \
 		--enable-version-specific-runtime-libs --enable-__cxa_atexit
 
@@ -120,7 +121,10 @@ build_gcc elf $DIR_ELF_OUTPUT
 #: ${PKG_CONFIG:=pkg-config --static}
 #export PKG_CONFIG
 
+rm -rf ldr-utils_build
 build_ldr_utils
+
+#TODO: if it's for windows we also need libwinpthread-1.dll
 
 #mkdir openocd_build
 #build_openocd $DIR_ELF_OUTPUT
