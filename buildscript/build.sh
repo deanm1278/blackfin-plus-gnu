@@ -98,7 +98,7 @@ build_openocd()
 
 	change_clean_dir openocd_build
 	echo "configuring openocd..."
-	run_cmd "${DIR_OPENOCD_SOURCE}"/configure --prefix=${prefix} --disable-werror
+	run_cmd "${DIR_OPENOCD_SOURCE}"/configure --prefix=${prefix} $BUILD_TARGET $HOST_TARGET --disable-werror
 	echo "building openocd..."
 	run_cmd $MAKE LDFLAGS="-L/usr/local/lib"
 	echo "installing openocd..."
@@ -126,5 +126,5 @@ build_ldr_utils
 
 #TODO: if it's for windows we also need libwinpthread-1.dll
 
-#mkdir openocd_build
-#build_openocd $DIR_ELF_OUTPUT
+mkdir openocd_build
+build_openocd $DIR_ELF_OUTPUT
