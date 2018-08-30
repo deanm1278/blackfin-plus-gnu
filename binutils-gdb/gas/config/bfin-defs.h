@@ -246,7 +246,7 @@ struct expression_cell
 /* User Type Definitions.  */
 struct bfin_insn
 {
-  unsigned long value;
+  unsigned long long value;
   struct bfin_insn *next;
   struct expression_cell *exp;
   int pcrel;
@@ -258,7 +258,7 @@ struct bfin_insn
 
 typedef struct expr_node_struct Expr_Node;
 
-extern INSTR_T gencode (unsigned long x);
+extern INSTR_T gencode (unsigned long long x);
 extern INSTR_T conscode (INSTR_T head, INSTR_T tail);
 extern INSTR_T conctcode (INSTR_T head, INSTR_T tail);
 extern INSTR_T note_reloc

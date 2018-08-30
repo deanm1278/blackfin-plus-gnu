@@ -100,7 +100,10 @@ build_openocd()
 	echo "configuring openocd..."
 	run_cmd "${DIR_OPENOCD_SOURCE}"/configure --prefix=${prefix} $BUILD_TARGET $HOST_TARGET --disable-werror
 	echo "building openocd..."
-	run_cmd $MAKE LDFLAGS="-L/usr/local/lib"
+	#run_cmd $MAKE LDFLAGS="-L/usr/local/lib"
+
+	#this is hacky...
+	run_cmd $MAKE LDFLAGS="-L/mnt/c/msys64/mingw64/lib"
 	echo "installing openocd..."
 	run_cmd make install
 }
@@ -124,7 +127,7 @@ build_gcc elf $DIR_ELF_OUTPUT
 rm -rf ldr-utils_build
 build_ldr_utils
 
-#TODO: if it's for windows we also need libwinpthread-1.dll
-
 mkdir openocd_build
 build_openocd $DIR_ELF_OUTPUT
+
+#TODO: if it's for windows we also need libwinpthread-1.dll and libusb1

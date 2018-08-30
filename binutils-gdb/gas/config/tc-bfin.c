@@ -948,7 +948,7 @@ note_reloc2 (INSTR_T code, const char *symbol, int reloc, int value, int pcrel)
 }
 
 INSTR_T
-gencode (unsigned long x)
+gencode (unsigned long long x)
 {
   INSTR_T cell = XOBNEW (&mempool, struct bfin_insn);
   memset (cell, 0, sizeof (struct bfin_insn));
@@ -1171,6 +1171,10 @@ Expr_Node_Gen_Reloc_R (Expr_Node * head)
 #define ASSIGNF(x,f) c_code.opcode |= ((x & c_code.mask_##f)<<c_code.bits_##f)
 #define ASSIGN_R(x) c_code.opcode |= (((x ? (x->regno & CODE_MASK) : 0) & c_code.mask_##x)<<c_code.bits_##x)
 
+#define ASSIGN64(x) c_code.opcode |= ((unsigned long long)(x & c_code.mask_##x)<<c_code.bits_##x)
+#define ASSIGNF64(x,f) c_code.opcode |= ((unsigned long long)(x & c_code.mask_##f)<<c_code.bits_##f)
+#define ASSIGN_R64(x) c_code.opcode |= ((unsigned long long)((x ? (x->regno & CODE_MASK) : 0) & c_code.mask_##x)<<c_code.bits_##x)
+
 #define HI_64(x) (((unsigned long long)x >> 48) & 0xffff)
 #define HI_MID_64(x) (((unsigned long long)x >> 32) & 0xffff)
 #define LO_MID_64(x) (((unsigned long long)x >> 16) & 0xffff)
@@ -1384,17 +1388,17 @@ bfin_gen_linkage (int R, int framesize)
 INSTR_T
 bfin_gen_ldimm (REG_T reg, Expr_Node * pimm)
 {
-  long int grp;
-  long int imm;
+  long long grp;
+  long long imm;
   unsigned val = EXPR_VALUE (pimm);
   INIT (LDIMM);
 
-  ASSIGN_R (reg);
+  ASSIGN_R64 (reg);
   grp = (GROUP (reg));
-  ASSIGN (grp);
+  ASSIGN64 (grp);
 
   imm = val;
-  ASSIGN (imm);
+  ASSIGN64 (imm);
 
   return GEN_OPCODE64 ();
 }
